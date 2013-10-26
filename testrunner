@@ -1,8 +1,0 @@
-#!/usr/bin/env escript
-
--compile(node).
--compile(node_impl).
-
-main(_) ->
-  eunit:test(node),
-  euint:test(node_impl).
