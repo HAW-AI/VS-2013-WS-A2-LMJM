@@ -1,0 +1,4 @@
+#!/bin/sh
+
+erlc node_start.erl node.erl
+./bin/noderunner

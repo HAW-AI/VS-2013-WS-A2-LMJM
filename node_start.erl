@@ -12,7 +12,12 @@
 
 start(ConfigFile) ->
   Lines = read_lines(ConfigFile),
+
+  log("ladida ~p", [self()]),
+
   NodeName = get_node_name(ConfigFile),
+
+  log("ladida~s", [""]),
 
   %%Generiere lokale umgebung des Nodes/Knoten
   BasicEdges = get_edges_from_config(NodeName, get_config_from_lines(Lines)),
@@ -25,8 +30,7 @@ start(ConfigFile) ->
     rejected_edges = []
   },
 
-
-  Pid = spawn(fun() -> loop(NodeState) end),
+  Pid = spawn(fun() -> node:loop(NodeState) end),
   register_node(NodeName, Pid),
   Lines.
 
@@ -83,6 +87,8 @@ get_edges_from_config(ParentNodeName, Config) ->
   } || {Weight, NodeName} <- Config ].
 
 
+log(Format, Data) ->
+  io_lib:format("node: " ++ Format ++ "~n", Data).
 
 
 

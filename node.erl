@@ -6,11 +6,7 @@
 -include_lib("datastructures.hrl").
 
 loop(State) ->
-  receive
-    {Message} ->
-      log("~s", Message),
-      loop(State)
-  end.
+  io:fread("", "~c").
 
 log(Format, Data) ->
   io_lib:format("node: " ++ Format ++ "~n", Data).
