@@ -15,7 +15,7 @@ start(ConfigFile) ->
   NodeName = get_node_name(ConfigFile),
 
   %%Generiere lokale umgebung des Nodes/Knoten
-  BasicEdges = get_edges_from_config(NodeName,Lines),
+  BasicEdges = get_edges_from_config(NodeName, get_config_from_lines(Lines)),
 
   %%Init state of this node
   NodeState = #state {
@@ -75,12 +75,16 @@ get_config_from_lines(Lines) ->
   [split_string(Line, ",") || Line <- Lines].
 
 %%Initialisiert die Edges mit unbekannter PID der nodes
-get_edges_from_config(ParentNodeName, Lines) ->
+get_edges_from_config(ParentNodeName, Config) ->
   [#edge {
     node_1 = #node { name = ParentNodeName, pid=undefined },
     node_2 = #node { name = NodeName, pid=undefined },
     weight = Weight
-  } || {Weight, NodeName} <- get_config_from_lines(Lines) ].
+  } || {Weight, NodeName} <- Config ].
+
+
+
+
 
 %%Testcases
 get_node_name_test() ->
@@ -100,3 +104,20 @@ get_config_from_lines_test() ->
   Lines2 = ["1,node_0", "2, node_4"],
   ?assertEqual([{"1", "node_0"}, {"2", "node_4"}], get_config_from_lines(Lines)),
   ?assertEqual([{"1", "node_0"}, {"2", "node_4"}], get_config_from_lines(Lines2)).
+
+get_edges_from_config_test() ->
+  Config = [{"1", "node_1"}, {"2", "node_4"}],
+  NodeName = "node_0",
+
+  Expected_edge_1 = #edge {
+    node_1 = #node { name = NodeName, pid=undefined },
+    node_2 = #node { name = "node_1", pid=undefined },
+    weight = "1"
+  },
+
+  Expected_edge_2 = #edge {
+    node_1 = #node { name = NodeName, pid=undefined },
+    node_2 = #node { name = "node_4", pid=undefined },
+    weight = "2"
+  },
+  ?assertEqual([Expected_edge_1, Expected_edge_2], get_edges_from_config(NodeName, Config)).
