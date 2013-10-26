@@ -15,13 +15,13 @@ start(ConfigFile) ->
   NodeName = get_node_name(ConfigFile),
 
   %%Generiere lokale umgebung des Nodes/Knoten
-  BasicEdges = get_edges_from_config(Lines),
+  BasicEdges = get_edges_from_config(NodeName,Lines),
 
   %%Init state of this node
   NodeState = #state {
     name = NodeName,
     basic_edges = BasicEdges,
-    branch_edge = none,
+    branch_edge = undefined,
     rejected_edges = []
   },
 
@@ -74,9 +74,13 @@ split_string(String, Char) ->
 get_config_from_lines(Lines) ->
   [split_string(Line, ",") || Line <- Lines].
 
-get_edges_from_config(Lines) ->
-  %[Edge || #edge {}
-  [].
+%%Initialisiert die Edges mit unbekannter PID der nodes
+get_edges_from_config(ParentNodeName, Lines) ->
+  [#edge {
+    node_1 = #node { name = ParentNodeName, pid=undefined },
+    node_2 = #node { name = NodeName, pid=undefined },
+    weight = Weight
+  } || {Weight, NodeName} <- get_config_from_lines(Lines) ].
 
 %%Testcases
 get_node_name_test() ->
