@@ -1,26 +1,55 @@
 -module(node).
--export([loop/1]).
+-export([start/1]).
 
 -include_lib("eunit/include/eunit.hrl").
 
 -include_lib("datastructures.hrl").
 
-loop(State) ->
+start(State) ->
+  register_node(State#state.name, self()),
   NewState = get_pid_of_neighbour_nodes(State),
-  lists:foreach(
-    fun(_) -> log("~p", [NewState]) end,
-    lists:seq(0, 1)
-  ),
-  io:fread("", "~c").
+  loop(NewState).
+
+loop(State) ->
+  log("~p", [State]),
+
+  receive
+    {initiate,Level,FragName,NodeState,Edge} ->
+      NewState = handle_initiate_message(State, Level, FragName, NodeState, Edge),
+      loop(NewState);
+    {test,Level,FragName,Edge} ->
+      NewState = handle_test_message(State, Level, FragName, Edge),
+      loop(NewState);
+    {accept,Edge} ->
+      NewState = handle_accept_message(State, Edge),
+      loop(NewState);
+    {reject,Edge} ->
+      NewState = handle_reject_message(State, Edge),
+      loop(NewState);
+    {report,Weight,Edge} ->
+      NewState = handle_report_message(State, Weight, Edge),
+      loop(NewState);
+    {changeroot,Edge} ->
+      NewState = handle_changeroot_mesage(State, Edge),
+      loop(NewState);
+    {connect,Level,Edge} ->
+      NewState = handle_connect_message(State, Level, Edge),
+      loop(NewState)
+  end.
+
 
 log(Format, Data) ->
   io:format("node: " ++ Format ++ "~n", Data).
 
 
+%%Registriert den NodeName im Netzwerk
+register_node(NodeName, Pid) ->
+  global:register_name(NodeName, Pid).
+
 %%Für alle Nachbar nodes in basic edge list die PID ermitteln
 get_pid_of_neighbour_nodes(State) ->
-  NewEdgeList = get_pid_of_neighbour_nodes(State#state.basic_edges, []),
-  State#state { basic_edges = NewEdgeList }.
+  NewEdgeList = get_pid_of_neighbour_nodes(State#state.edges, []),
+  State#state { edges = NewEdgeList }.
 
 
 get_pid_of_neighbour_nodes([], NewEdgeList) ->
@@ -33,8 +62,42 @@ get_pid_of_neighbour_nodes([Edge | Tail], NewEdgeList) ->
   NewList = NewEdgeList ++ [NewEdge],
   get_pid_of_neighbour_nodes(Tail, NewList).
 
-%%
+
+handle_initiate_message(GlobalState, Level, FragName, NodeState, SourceEdge) ->
+  %%Finde akmg in basic edges
+  Akmg = lists:foldl(
+    fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
+                          true -> Edge;
+                          false -> Akmg
+                        end
+    end,
+    GlobalState#state.edges
+  ),
+
+  %%Sende Test
+  Akmg#edge.node_2#node.pid ! {test,Level,FragName,Akmg},
+
+  %%TODO Akmg makieren und state aktualisieren
+  GlobalState.
 
 get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
+
+handle_test_message(State, Level, FragName, Edge) ->
+  State.
+
+handle_accept_message(State, Edge) ->
+  State.
+
+handle_reject_message(State, Edge) ->
+  State.
+
+handle_report_message(State, Weight, Edge) ->
+  State.
+
+handle_changeroot_mesage(State, Edge) ->
+  State.
+
+handle_connect_message(State, Level, Edge) ->
+  State.
 
 %%Testcases

@@ -1,16 +1,16 @@
 -module(node_start).
--export([start/1, split_string/2]).
+-export([main/1, split_string/2]).
 -import(string, [rstr/2, len/1, substr/3, sub_string/3, strip/1]).
 
 %%Node Loop einbinden
--import(node_impl, [loop/1]).
+-import(node_impl, [start/1]).
 
 -include_lib("eunit/include/eunit.hrl").
 
 %%Records einbinden
 -include_lib("datastructures.hrl").
 
-start(ConfigFile) ->
+main(ConfigFile) ->
   Lines = read_lines(ConfigFile),
 
   log("ladida ~p", [self()]),
@@ -20,19 +20,18 @@ start(ConfigFile) ->
   log("ladida~s", [""]),
 
   %%Generiere lokale umgebung des Nodes/Knoten
-  BasicEdges = get_edges_from_config(NodeName, get_config_from_lines(Lines)),
+  Edges = get_edges_from_config(NodeName, get_config_from_lines(Lines)),
 
   %%Init state of this node
   NodeState = #state {
     name = NodeName,
-    basic_edges = BasicEdges,
-    branch_edge = undefined,
-    rejected_edges = []
+    edges = Edges,
+    status = sleeping
   },
 
-  Pid = spawn(fun() -> node:loop(NodeState) end),
-  register_node(NodeName, Pid),
-  Lines.
+  Pid = spawn(fun() -> node:start(NodeState) end),
+  log("Pid ~p", [Pid]),
+  io:fread("", "~c").
 
 read_lines(File) ->
   {ok, IoDevice} = file:open(File, read),
@@ -56,9 +55,7 @@ get_node_name(ConfigFile) ->
       substr(ConfigFile, 1, Index_1 - 1)
   end.
 
-%%Registriert den NodeName im Netzwerk
-register_node(NodeName, Pid) ->
-  global:register_name(NodeName, Pid).
+
 
 %%Teilt einen string an der stelle, wo char gefunden wird
 %%Ist char nicht enthalten wird ein tupel aus {string, ""} zurückgegeben
@@ -83,7 +80,8 @@ get_edges_from_config(ParentNodeName, Config) ->
   [#edge {
     node_1 = #node { name = ParentNodeName, pid=undefined },
     node_2 = #node { name = NodeName, pid=undefined },
-    weight = Weight
+    weight = Weight,
+    type = basic
   } || {Weight, NodeName} <- Config ].
 
 
@@ -118,12 +116,14 @@ get_edges_from_config_test() ->
   Expected_edge_1 = #edge {
     node_1 = #node { name = NodeName, pid=undefined },
     node_2 = #node { name = "node_1", pid=undefined },
-    weight = "1"
+    weight = "1",
+    type = basic
   },
 
   Expected_edge_2 = #edge {
     node_1 = #node { name = NodeName, pid=undefined },
     node_2 = #node { name = "node_4", pid=undefined },
-    weight = "2"
+    weight = "2",
+    type = basic
   },
   ?assertEqual([Expected_edge_1, Expected_edge_2], get_edges_from_config(NodeName, Config)).

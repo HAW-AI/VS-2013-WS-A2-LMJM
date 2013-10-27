@@ -2,9 +2,8 @@
 
 -record(state, {
   name,
-  branch_edge,
-  rejected_edges,
-  basic_edges
+  edges,
+  status
 }).
 
 -record(node, {
@@ -15,5 +14,6 @@
 -record(edge, {
   node_1,
   node_2,
-  weight
+  weight,
+  type
 }).

@@ -7,7 +7,7 @@ main(_) ->
   Path = "nodes/",
 
   lists:foreach(
-    fun(Num) -> node_start:start(lists:concat([Path, "node_", Num, ".conf"])) end,
+    fun(Num) -> node_start:main(lists:concat([Path, "node_", Num, ".conf"])) end,
     lists:seq(0, 6)
   ),
   io:fread("", "~c").
