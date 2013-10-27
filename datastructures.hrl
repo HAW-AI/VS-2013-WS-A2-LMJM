@@ -3,7 +3,9 @@
 -record(state, {
   name,
   edges,
-  status
+  status,
+  fragmentName,
+  fragmentLevel
 }).
 
 -record(node, {

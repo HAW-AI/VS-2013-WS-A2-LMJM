@@ -75,15 +75,26 @@ handle_initiate_message(GlobalState, Level, FragName, NodeState, SourceEdge) ->
   ),
 
   %%Sende Test
-  Akmg#edge.node_2#node.pid ! {test,Level,FragName,Akmg},
-
-  %%TODO Akmg makieren und state aktualisieren
+  Akmg#edge.node_2#node.pid ! {test,GlobalState#state.fragmentLevel,Akmg#edge.weight,Akmg},
+  %%State unverändert zurückgeben
   GlobalState.
 
 get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
 
 handle_test_message(State, Level, FragName, Edge) ->
-  State.
+  %%Fallunterscheidung:
+  if FragName == State#state.fragmentName ->
+    %%Kante als rejected makieren
+    %%verschicke rejected nachricht
+    %%ausnahme - s3.
+    State;
+   FragName /= State#state.fragmentName, State#state.fragmentLevel >= Level ->
+    %%sende accept über die kante
+    State;
+  FragName /= State#state.fragmentName, State#state.fragmentLevel < Level ->
+    %%antwort verzögern bzw nicht antworten
+    State
+  end.
 
 handle_accept_message(State, Edge) ->
   State.
