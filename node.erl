@@ -2,8 +2,8 @@
 -export([start/1]).
 
 -include_lib("eunit/include/eunit.hrl").
-
 -include_lib("datastructures.hrl").
+
 
 start(State) ->
   register_node(State#state.name, self()),
@@ -54,7 +54,7 @@ get_pid_of_neighbour_nodes(State) ->
 
 get_pid_of_neighbour_nodes([], NewEdgeList) ->
   NewEdgeList;
-get_pid_of_neighbour_nodes([Edge | Tail], NewEdgeList) ->
+get_pid_of_neighbour_nodes([{Weight, Edge} | Tail], NewEdgeList) ->
   Pid = get_pid_by_name(Edge#edge.node_2#node.name),
 
   NewNode = Edge#edge.node_2#node { pid = Pid },
@@ -82,15 +82,34 @@ handle_initiate_message(GlobalState, Level, FragName, NodeState, SourceEdge) ->
 
 get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
 
-handle_test_message(State, Level, FragName, Edge) ->
+handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
+  {Weight, Edge} = util:get_edge_by_neighbour_edge(Neighbour_edge),
+
   if FragName == State#state.fragmentName ->
     %%Kante als rejected makieren
+    NewEdge = Edge#edge { type = rejected},
+    Modified_edge_list = util:replace_edge(State#state.edges, Edge, NewEdge),
+    NewState = State#state { edges = Modified_edge_list },
+
     %%verschicke rejected nachricht
-    %%ausnahme - s3.
-    State;
+    Send_edge = {
+                  NewEdge#edge.weight,
+                  NewEdge#edge.node_1#node.name,
+                  NewEdge#edge.node_2#node.name
+                },
+
+    NewEdge#edge.node_2#node.pid ! {reject, Send_edge},
+    %%ausnahme - s3 TODO what?
+    NewState;
    FragName /= State#state.fragmentName, State#state.fragmentLevel >= Level ->
     %%sende accept über die kante
+    Send_edge = {
+                  Edge#edge.weight,
+                  Edge#edge.node_1,
+                  Edge#edge.node_2
+                },
+    Edge#edge.node_2#node.pid ! {accept, Send_edge},
     State;
   FragName /= State#state.fragmentName, State#state.fragmentLevel < Level ->
     %%antwort verzögern bzw nicht antworten

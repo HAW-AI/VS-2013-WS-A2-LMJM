@@ -1,4 +1,6 @@
 #!/usr/bin/env escript
+%%! -sname vsnode -setcookie lmjm
+
 
 -compile(node_start).
 -compile(util).
