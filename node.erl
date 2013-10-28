@@ -75,7 +75,8 @@ handle_initiate_message(GlobalState, Level, FragName, NodeState, SourceEdge) ->
   ),
 
   %%Sende Test
-  Akmg#edge.node_2#node.pid ! {test,GlobalState#state.fragmentLevel,Akmg#edge.weight,Akmg},
+  EdgeTuple = {Akmg#edge.weight, Akmg#edge.node_1#node.name, Akmg#edge.node_2#node.name},
+  Akmg#edge.node_2#node.pid ! {test,GlobalState#state.fragmentLevel,Akmg#edge.weight,EdgeTuple},
   %%State unverändert zurückgeben
   GlobalState.
 

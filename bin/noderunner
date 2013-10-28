@@ -1,6 +1,7 @@
 #!/usr/bin/env escript
 
 -compile(node_start).
+-compile(util).
 -compile(node).
 
 main(_) ->

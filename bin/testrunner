@@ -1,8 +1,10 @@
 #!/usr/bin/env escript
 
 -compile(node_start).
+-compile(util).
 -compile(node).
 
 main(_) ->
   eunit:test(node_start),
+  eunit:test(util),
   eunit:test(node).

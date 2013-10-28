@@ -1,4 +1,4 @@
 #!/bin/sh
 
-erlc node_start.erl node.erl
+erlc node_start.erl util.erl node.erl
 ./bin/testrunner
