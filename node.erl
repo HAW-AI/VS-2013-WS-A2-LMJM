@@ -7,7 +7,6 @@
 
 start(State) ->
   register_node(State#state.name, self()),
-  NewState = get_pid_of_neighbour_nodes(State),
   loop(NewState).
 
 loop(State) ->
@@ -37,34 +36,15 @@ loop(State) ->
       loop(NewState)
   end.
 
+get_target_pid(Edge) ->
+  global:whereis_name(Edge#edge.node_2#node.name).
+
 
 log(Format, Data) ->
   io:format("node: " ++ Format ++ "~n", Data).
 
-
-%%Registriert den NodeName im Netzwerk
 register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).
-
-%%Für alle Nachbar nodes in basic edge list die PID ermitteln
-get_pid_of_neighbour_nodes(State) ->
-  NewEdgeList = get_pid_of_neighbour_nodes(State#state.edges, []),
-  State#state { edges = NewEdgeList }.
-
-
-get_pid_of_neighbour_nodes([], NewEdgeList) ->
-  NewEdgeList;
-get_pid_of_neighbour_nodes([{Weight, Edge} | Tail], NewEdgeList) ->
-  Pid = get_pid_by_name(Edge#edge.node_2#node.name),
-
-  NewNode = Edge#edge.node_2#node { pid = Pid },
-  NewEdge = Edge#edge {node_2 = NewNode },
-  NewList = NewEdgeList ++ [NewEdge],
-  get_pid_of_neighbour_nodes(Tail, NewList).
-
-
-get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
-
 
 wakeup(State) ->
   %%Finde akmg in basic edges
@@ -122,7 +102,7 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
 
 send_initiate_message(FragmentLevel, FragmentName, NodeState, Edge) ->
   EdgeTuple = { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name },
-  Edge#edge.node_2#node.pid ! {initiate, FragmentLevel, FragmentName, NodeState, EdgeTuple}.
+  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeState, EdgeTuple}.
 
 
 test(State) ->
@@ -147,7 +127,7 @@ test(State) ->
 
 send_test_message(FragmentLevel, FragmentName, Edge) ->
   EdgeTuple = {Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name },
-  Edge#edge.node_2#node.pid ! {test, FragmentLevel, FragmentName, EdgeTuple}.
+  get_target_pid(Edge) ! {test, FragmentLevel, FragmentName, EdgeTuple}.
 
 handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
@@ -166,7 +146,7 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
                   NewEdge#edge.node_2#node.name
                 },
 
-    NewEdge#edge.node_2#node.pid ! {reject, Send_edge},
+    get_target_pid(NewEdge) ! {reject, Send_edge},
     %%ausnahme - s3 TODO what?
     NewState;
    FragName /= State#state.fragment_name, State#state.fragment_level >= Level ->
@@ -176,7 +156,7 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
                   Edge#edge.node_1,
                   Edge#edge.node_2
                 },
-    Edge#edge.node_2#node.pid ! {accept, Send_edge},
+    get_target_pid(Edge) ! {accept, Send_edge},
     State;
   FragName /= State#state.fragment_name, State#state.fragment_level < Level ->
     %%antwort verzögern bzw nicht antworten
@@ -237,7 +217,7 @@ report(State) ->
   case (State#state.find_count == 0) and (State#state.test_edge == undefined) of
     true ->
       NewState = State#state { status = found },
-      State#state.in_branch#edge.node_2#node.pid ! { report, State#state.best_weight, State#state.in_branch },
+      get_target_pid(State#state.in_branch) ! { report, State#state.best_weight, State#state.in_branch },
       NewState;
     false -> State
   end.
@@ -248,8 +228,8 @@ handle_changeroot_mesage(State) ->
 change_root(State) ->
   BestEdge = State#state.best_edge,
   case BestEdge#edge.type of
-    branch -> BestEdge#edge.node_2#node.pid ! { changeroot, BestEdge };
-    _ -> BestEdge#edge.node_2#node.pid ! { connect, State#state.fragment_level, BestEdge }
+    branch -> get_target_pid(BestEdge) ! { changeroot, BestEdge };
+    _ -> get_target_pid(BestEdge) ! { connect, State#state.fragment_level, BestEdge }
   end,
   State.
 
