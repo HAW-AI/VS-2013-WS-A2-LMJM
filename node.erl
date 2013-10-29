@@ -126,7 +126,28 @@ send_initiate_message(FragmentLevel, FragmentName, NodeState, Edge) ->
 
 
 test(State) ->
-  nothing.
+  BasicEdges = lists:filter(
+                  fun(Edge) -> Edge#edge.type == basic end,
+                  State#state.edges),
+
+  case length(BasicEdges) > 0 of
+    true ->
+      TestEdge = lists:foldl(
+                fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
+                                      true -> Edge;
+                                      false-> Akmg
+                                    end
+                end,
+                BasicEdges),
+      send_test_message(State#state.fragment_level, State#state.fragment_name, TestEdge),
+      State#state { test_edge = TestEdge };
+    false ->
+      report(State#state { test_edge = undefined })
+  end.
+
+send_test_message(FragmentLevel, FragmentName, Edge) ->
+  EdgeTuple = {Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name },
+  Edge#edge.node_2#node.pid ! {test, FragmentLevel, FragmentName, EdgeTuple}.
 
 handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
@@ -241,4 +262,4 @@ handle_connect_message(State, Level, Edge) ->
         NewState
     end.
 
-%%Testcases
+%%Testcases  LState#state { find_count = NewFindCount }.
