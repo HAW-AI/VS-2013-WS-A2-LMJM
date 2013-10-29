@@ -2,10 +2,15 @@
 
 -record(state, {
   name,
-  edges,
   status,
-  fragmentName,
-  fragmentLevel
+  edges,
+  best_edge,
+  best_weight,
+  test_edge,
+  in_branch,
+  find_count,
+  fragment_name,
+  fragment_level
 }).
 
 -record(node, {

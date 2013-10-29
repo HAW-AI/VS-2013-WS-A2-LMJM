@@ -76,7 +76,7 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
 
   %%Sende Test
   EdgeTuple = {Akmg#edge.weight, Akmg#edge.node_1#node.name, Akmg#edge.node_2#node.name},
-  Akmg#edge.node_2#node.pid ! {test,State#state.fragmentLevel,Akmg#edge.weight,EdgeTuple},
+  Akmg#edge.node_2#node.pid ! {test,State#state.fragment_level,Akmg#edge.weight,EdgeTuple},
   %%State unverändert zurückgeben
   State.
 
@@ -86,7 +86,7 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
   {Weight, Edge} = util:get_edge_by_neighbour_edge(Neighbour_edge),
 
-  if FragName == State#state.fragmentName ->
+  if FragName == State#state.fragment_name ->
     %%Kante als rejected makieren
     NewEdge = Edge#edge { type = rejected},
     Modified_edge_list = util:replace_edge(State#state.edges, Edge, NewEdge),
@@ -102,7 +102,7 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
     NewEdge#edge.node_2#node.pid ! {reject, Send_edge},
     %%ausnahme - s3 TODO what?
     NewState;
-   FragName /= State#state.fragmentName, State#state.fragmentLevel >= Level ->
+   FragName /= State#state.fragment_name, State#state.fragment_level >= Level ->
     %%sende accept über die kante
     Send_edge = {
                   Edge#edge.weight,
@@ -111,7 +111,7 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
                 },
     Edge#edge.node_2#node.pid ! {accept, Send_edge},
     State;
-  FragName /= State#state.fragmentName, State#state.fragmentLevel < Level ->
+  FragName /= State#state.fragment_name, State#state.fragment_level < Level ->
     %%antwort verzögern bzw nicht antworten
     State
   end.

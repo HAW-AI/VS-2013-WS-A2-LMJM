@@ -27,8 +27,8 @@ main(ConfigFile) ->
     name = NodeName,
     edges = Edges,
     status = sleeping,
-    fragmentLevel = 0,
-    fragmentName = undefined
+    fragment_level = 0,
+    fragment_name = undefined
   },
 
   Pid = spawn(fun() -> node:start(NodeState) end),
