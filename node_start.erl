@@ -79,14 +79,13 @@ get_config_from_lines(Lines) ->
 
 %%Initialisiert die Edges mit unbekannter PID der nodes
 get_edges_from_config(ParentNodeName, Config) ->
-  [{
-   Weight,
+  [
    #edge {
     node_1 = #node { name = ParentNodeName, pid=undefined },
     node_2 = #node { name = NodeName, pid=undefined },
     weight = Weight,
     type = basic
-  }} || {Weight, NodeName} <- Config ].
+  } || {Weight, NodeName} <- Config ].
 
 
 log(Format, Data) ->
@@ -117,17 +116,17 @@ get_edges_from_config_test() ->
   Config = [{"1", "node_1"}, {"2", "node_4"}],
   NodeName = "node_0",
 
-  Expected_edge_1 = {"1", #edge {
+  Expected_edge_1 = #edge {
     node_1 = #node { name = NodeName, pid=undefined },
     node_2 = #node { name = "node_1", pid=undefined },
     weight = "1",
     type = basic
-  }},
+  },
 
-  Expected_edge_2 = {"2", #edge {
+  Expected_edge_2 = #edge {
     node_1 = #node { name = NodeName, pid=undefined },
     node_2 = #node { name = "node_4", pid=undefined },
     weight = "2",
     type = basic
-  }},
+  },
   ?assertEqual([Expected_edge_1, Expected_edge_2], get_edges_from_config(NodeName, Config)).

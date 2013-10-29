@@ -13,7 +13,7 @@ replace_element(List, Old_elem, New_elem) ->
 
 get_edge_by_neighbour_edge(Edge_list, {Weight, Nodex, Nodey}) ->
   List_tmp = lists:filter(
-                fun({_, Elem}) -> (Elem#edge.weight == Weight) and
+                fun(Elem) -> (Elem#edge.weight == Weight) and
                              (Elem#edge.node_1#node.name == Nodey) and
                              (Elem#edge.node_2#node.name == Nodex)
                 end,
@@ -63,19 +63,19 @@ replace_edge_test()->
 
 get_edge_by_neighbour_edge_test() ->
   %Edge_list, {Weight, Nodex, Nodey}
-  Edge_1 = {"1", #edge {
+  Edge_1 = #edge {
     node_1 = #node { name = "eins", pid = undefined },
     node_2 = #node { name = "zwei", pid = undefined },
     weight = "1",
     type   = basic
-  }},
+  },
 
-  Edge_2 = {"4", #edge {
+  Edge_2 = #edge {
     node_1 = #node { name = "drei", pid = undefined },
     node_2 = #node { name = "vier", pid = undefined },
     weight = "4",
     type   = rejected
-  }},
+  },
 
   Edge_list = [Edge_1, Edge_2],
 
