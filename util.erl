@@ -6,7 +6,7 @@
 -include_lib("datastructures.hrl").
 
 %%Ersetzt ein Element in
-replace_element(List, Old_elem, New_elem) ->
+replace_edge(List, Old_elem, New_elem) ->
   List_tmp = List -- [Old_elem],
   List_tmp ++ [New_elem].
 
@@ -58,8 +58,8 @@ replace_edge_test()->
   Destination_list_1 = [Edge_1, Edge_2_changed],
   Destination_list_2 = [Edge_2, Edge_1_changed],
 
-  ?assertEqual(Destination_list_1, replace_element(Source_list, Edge_2, Edge_2_changed)),
-  ?assertEqual(Destination_list_2, replace_element(Source_list, Edge_1, Edge_1_changed)).
+  ?assertEqual(Destination_list_1, replace_edge(Source_list, Edge_2, Edge_2_changed)),
+  ?assertEqual(Destination_list_2, replace_edge(Source_list, Edge_1, Edge_1_changed)).
 
 get_edge_by_neighbour_edge_test() ->
   %Edge_list, {Weight, Nodex, Nodey}
