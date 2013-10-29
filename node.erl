@@ -63,7 +63,10 @@ get_pid_of_neighbour_nodes([{Weight, Edge} | Tail], NewEdgeList) ->
   get_pid_of_neighbour_nodes(Tail, NewList).
 
 
-handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
+get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
+
+
+wakeup(State) ->
   %%Finde akmg in basic edges
   Akmg = lists:foldl(
     fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
@@ -74,13 +77,19 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
     State#state.edges
   ),
 
+  %%Makiere Edge als branch
+  AsBranch = Akmg#edge { type = branch },
+  NewEdgeList = util:replace_edge(State#state.edges, Akmg, AsBranch),
+
+  State#state { edges = NewEdgeList, status = found }.
+
+handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
   %%Sende Test
   EdgeTuple = {Akmg#edge.weight, Akmg#edge.node_1#node.name, Akmg#edge.node_2#node.name},
   Akmg#edge.node_2#node.pid ! {test,State#state.fragment_level,Akmg#edge.weight,EdgeTuple},
   %%State unverändert zurückgeben
   State.
 
-get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
 
 handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
@@ -129,6 +138,29 @@ handle_changeroot_mesage(State, Edge) ->
   State.
 
 handle_connect_message(State, Level, Edge) ->
-  State.
+  NewState =  case State#state.status == sleeping of
+                true -> wakeup(State)
+              end,
+
+  LocalEdge = util:get_edge_by_neighbour_edge(NewState#state.edges, Edge),
+
+    if
+      Level < NewState#state.fragmentLevel ->
+        %%Makiere LocalEdge als branch
+        %%Sende initiate ueber LocalEdge
+        case NewState#state.status == find of
+          true ->
+            %%Addiere 1 auf find-count
+            NewState;
+          false ->
+            NewState
+        end,
+      LocalEdge#edge.type == branch ->
+        %%Place message on end of queue
+        NewState;
+      true ->
+        %%Sende Initiate
+        NewState
+    end.
 
 %%Testcases
