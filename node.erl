@@ -29,8 +29,8 @@ loop(State) ->
     {report,Weight,Edge} ->
       NewState = handle_report_message(State, Weight, Edge),
       loop(NewState);
-    {changeroot,Edge} ->
-      NewState = handle_changeroot_mesage(State, Edge),
+    {changeroot,_} ->
+      NewState = handle_changeroot_mesage(State),
       loop(NewState);
     {connect,Level,Edge} ->
       NewState = handle_connect_message(State, Level, Edge),
@@ -171,7 +171,15 @@ handle_reject_message(State, Edge) ->
 handle_report_message(State, Weight, Edge) ->
   State.
 
-handle_changeroot_mesage(State, Edge) ->
+handle_changeroot_mesage(State) ->
+  change_root(State).
+
+change_root(State) ->
+  BestEdge = State#state.best_edge,
+  case BestEdge#edge.type of
+    branch -> BestEdge#edge.node_2#node.pid ! { changeroot, BestEdge };
+    _ -> BestEdge#edge.node_2#node.pid ! { connect, State#state.fragment_level, BestEdge }
+  end,
   State.
 
 handle_connect_message(State, Level, Edge) ->
