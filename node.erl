@@ -90,7 +90,7 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
                         fragment_name = FragName,
                         status = NodeState,
                         in_branch = Edge,
-                        best_edge = nil,
+                        best_edge = undefined,
                         best_weight = infinity
                        },
 
@@ -183,8 +183,18 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
     State
   end.
 
-handle_accept_message(State, Edge) ->
-  State.
+handle_accept_message(State, NeighbourEdge) ->
+  Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
+  {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
+                                   true -> {Edge#edge.weight, Edge};
+                                   false -> {State#state.best_weight, State#state.best_edge}
+                                 end,
+  NewState = State#state {
+               test_edge = undefined ,
+               best_weight = NewBestWeight,
+               best_edge = NewBestEdge
+              },
+  report(NewState).
 
 handle_reject_message(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
