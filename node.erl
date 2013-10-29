@@ -39,6 +39,8 @@ loop(State) ->
 get_target_pid(Edge) ->
   global:whereis_name(Edge#edge.node_2#node.name).
 
+edge_to_tuple(Edge) ->
+  { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name }.
 
 log(Format, Data) ->
   io:format("node: " ++ Format ++ "~n", Data).
@@ -97,12 +99,8 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
     false -> AfterState
   end.
 
-
-
-
 send_initiate_message(FragmentLevel, FragmentName, NodeState, Edge) ->
-  EdgeTuple = { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name },
-  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeState, EdgeTuple}.
+  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeState, edge_to_tuple(Edge)}.
 
 
 test(State) ->
@@ -126,8 +124,7 @@ test(State) ->
   end.
 
 send_test_message(FragmentLevel, FragmentName, Edge) ->
-  EdgeTuple = {Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name },
-  get_target_pid(Edge) ! {test, FragmentLevel, FragmentName, EdgeTuple}.
+  get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
 handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
@@ -202,7 +199,7 @@ handle_report_message(State, Weight, NeighbourEdge) ->
       report(NewState);
     false ->
       case State#state.status of
-        find -> self() ! { report, Weight, NeighbourEdge };
+        find -> self() ! { report, Weight, edge_to_tuple(NeighbourEdge) };
         _ -> case Weight > State#state.best_weight of
                true -> change_root(State);
                false -> case (State#state.best_weight == infinity) and (Weight == infinity) of
@@ -217,7 +214,7 @@ report(State) ->
   case (State#state.find_count == 0) and (State#state.test_edge == undefined) of
     true ->
       NewState = State#state { status = found },
-      get_target_pid(State#state.in_branch) ! { report, State#state.best_weight, State#state.in_branch },
+      get_target_pid(State#state.in_branch) ! { report, State#state.best_weight, edge_to_tuple(State#state.in_branch) },
       NewState;
     false -> State
   end.
@@ -228,8 +225,8 @@ handle_changeroot_mesage(State) ->
 change_root(State) ->
   BestEdge = State#state.best_edge,
   case BestEdge#edge.type of
-    branch -> get_target_pid(BestEdge) ! { changeroot, BestEdge };
-    _ -> get_target_pid(BestEdge) ! { connect, State#state.fragment_level, BestEdge }
+    branch -> get_target_pid(BestEdge) ! { changeroot, edge_to_tuple(BestEdge) };
+    _ -> get_target_pid(BestEdge) ! { connect, State#state.fragment_level, edge_to_tuple(BestEdge) }
   end,
   State.
 
@@ -273,5 +270,3 @@ handle_connect_message(State, Level, Edge) ->
                               LocalEdge),
         NewState
     end.
-
-%%Testcases  LState#state { find_count = NewFindCount }.
