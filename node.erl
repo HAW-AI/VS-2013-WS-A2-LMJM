@@ -168,8 +168,41 @@ handle_accept_message(State, Edge) ->
 handle_reject_message(State, Edge) ->
   State.
 
-handle_report_message(State, Weight, Edge) ->
-  State.
+handle_report_message(State, Weight, NeighbourEdge) ->
+  Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
+  case State#state.in_branch /= Edge of
+    true ->
+      {NewBestWeight, NewBestEdge} = case Weight < State#state.best_weight of
+                                       true -> {Weight, Edge};
+                                       false -> {State#state.best_weight, State#state.best_edge}
+                                     end,
+      NewState = State#state {
+                   find_count = State#state.find_count - 1,
+                   best_weight = NewBestWeight,
+                   best_edge = NewBestEdge
+                  },
+      report(NewState);
+    false ->
+      case State#state.status of
+        find -> self() ! { report, Weight, NeighbourEdge };
+        _ -> case Weight > State#state.best_weight of
+               true -> change_root(State);
+               false -> case (State#state.best_weight == infinity) and (Weight == infinity) of
+                          true -> log("ending, MST found. i guess :)", [])
+                        end
+             end
+      end,
+      State
+  end.
+
+report(State) ->
+  case (State#state.find_count == 0) and (State#state.test_edge == undefined) of
+    true ->
+      NewState = State#state { status = found },
+      State#state.in_branch#edge.node_2#node.pid ! { report, State#state.best_weight, State#state.in_branch },
+      NewState;
+    false -> State
+  end.
 
 handle_changeroot_mesage(State) ->
   change_root(State).
