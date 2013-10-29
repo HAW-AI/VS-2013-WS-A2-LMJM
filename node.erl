@@ -263,19 +263,34 @@ handle_connect_message(State, Level, Edge) ->
     if
       Level < NewState#state.fragment_level ->
         %%Makiere LocalEdge als branch
+        Branch = LocalEdge#edge { type = branch },
+        AktState = State#state { edges = util:replace_edge(State#state.edges,
+                                                           LocalEdge,
+                                                           Branch)},
         %%Sende initiate ueber LocalEdge
-        case NewState#state.status == find of
+        send_initiate_message(AktState#state.fragment_level,
+                              AktState#state.fragment_name,
+                              AktState#state.status,
+                              Branch),
+
+
+        case AktState#state.status == find of
           true ->
             %%Addiere 1 auf find-count
-            NewState;
+            AktState#state { find_count = AktState#state.find_count + 1 };
           false ->
             NewState
         end;
-      LocalEdge#edge.type == branch ->
+      LocalEdge#edge.type == basic ->
         %%Place message on end of queue
+        self() ! {connect, Level, Edge},
         NewState;
       true ->
         %%Sende Initiate
+        send_initiate_message(NewState#state.fragment_level + 1,
+                              LocalEdge#edge.weight,
+                              find,
+                              LocalEdge),
         NewState
     end.
 
