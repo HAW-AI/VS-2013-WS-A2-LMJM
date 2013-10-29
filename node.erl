@@ -186,8 +186,15 @@ handle_test_message(State, Level, FragName, Neighbour_edge) ->
 handle_accept_message(State, Edge) ->
   State.
 
-handle_reject_message(State, Edge) ->
-  State.
+handle_reject_message(State, NeighbourEdge) ->
+  Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
+  case Edge#edge.type of
+    basic ->
+      NewEdge = Edge#edge{ type = rejected },
+      NewState = State#state { edges = util:replace_edge(State#state.edges, Edge, NewEdge) },
+      test(NewState);
+    _ -> State
+  end.
 
 handle_report_message(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
