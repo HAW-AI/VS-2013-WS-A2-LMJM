@@ -63,7 +63,7 @@ get_pid_of_neighbour_nodes([{Weight, Edge} | Tail], NewEdgeList) ->
   get_pid_of_neighbour_nodes(Tail, NewList).
 
 
-handle_initiate_message(GlobalState, Level, FragName, NodeState, SourceEdge) ->
+handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
   %%Finde akmg in basic edges
   Akmg = lists:foldl(
     fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
@@ -71,14 +71,14 @@ handle_initiate_message(GlobalState, Level, FragName, NodeState, SourceEdge) ->
                           false -> Akmg
                         end
     end,
-    GlobalState#state.edges
+    State#state.edges
   ),
 
   %%Sende Test
   EdgeTuple = {Akmg#edge.weight, Akmg#edge.node_1#node.name, Akmg#edge.node_2#node.name},
-  Akmg#edge.node_2#node.pid ! {test,GlobalState#state.fragmentLevel,Akmg#edge.weight,EdgeTuple},
+  Akmg#edge.node_2#node.pid ! {test,State#state.fragmentLevel,Akmg#edge.weight,EdgeTuple},
   %%State unverändert zurückgeben
-  GlobalState.
+  State.
 
 get_pid_by_name(NodeName) -> global:whereis_name(NodeName).
 
