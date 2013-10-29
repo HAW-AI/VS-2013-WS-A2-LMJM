@@ -84,12 +84,49 @@ wakeup(State) ->
   State#state { edges = NewEdgeList, status = found }.
 
 handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
-  %%Sende Test
-  EdgeTuple = {Akmg#edge.weight, Akmg#edge.node_1#node.name, Akmg#edge.node_2#node.name},
-  Akmg#edge.node_2#node.pid ! {test,State#state.fragment_level,Akmg#edge.weight,EdgeTuple},
-  %%State unverändert zurückgeben
-  State.
+  Edge = util:get_edge_by_neighbour_edge(SourceEdge),
+  LState = State#state {
+                        fragment_level = Level,
+                        fragment_name = FragName,
+                        status = NodeState,
+                        in_branch = Edge,
+                        best_edge = nil,
+                        best_weight = infinity
+                       },
 
+  BranchList = list:filter(
+                fun(Elem) -> (Elem /= Edge) and (Elem#edge.type == branch) end,
+                LState#state.edges
+              ),
+
+  NewFindCount =  case NodeState == find of
+                    true ->
+                      LState#state.find_count + length(BranchList);
+                    false ->
+                      LState#state.find_count
+                  end,
+
+  lists:foreach(
+    fun(Edge) -> send_initiate_message(Level, FragName, NodeState, Edge) end,
+    BranchList ),
+
+  AfterState = LState#state { find_count = NewFindCount },
+
+  case NodeState == find of
+    true -> test(AfterState);
+    false -> AfterState
+  end.
+
+
+
+
+send_initiate_message(FragmentLevel, FragmentName, NodeState, Edge) ->
+  EdgeTuple = { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name },
+  Edge#edge.node_2#node.pid ! {initiate, FragmentLevel, FragmentName, NodeState, EdgeTuple}.
+
+
+test(State) ->
+  nothing.
 
 handle_test_message(State, Level, FragName, Neighbour_edge) ->
   %%Fallunterscheidung:
@@ -145,7 +182,7 @@ handle_connect_message(State, Level, Edge) ->
   LocalEdge = util:get_edge_by_neighbour_edge(NewState#state.edges, Edge),
 
     if
-      Level < NewState#state.fragmentLevel ->
+      Level < NewState#state.fragment_level ->
         %%Makiere LocalEdge als branch
         %%Sende initiate ueber LocalEdge
         case NewState#state.status == find of
@@ -154,7 +191,7 @@ handle_connect_message(State, Level, Edge) ->
             NewState;
           false ->
             NewState
-        end,
+        end;
       LocalEdge#edge.type == branch ->
         %%Place message on end of queue
         NewState;
