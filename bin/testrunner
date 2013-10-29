@@ -6,5 +6,4 @@
 
 main(_) ->
   eunit:test(node_start),
-  eunit:test(util),
-  eunit:test(node).
+  eunit:test(util).

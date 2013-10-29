@@ -1,13 +1,12 @@
 -module(node).
 -export([start/1]).
 
--include_lib("eunit/include/eunit.hrl").
 -include_lib("datastructures.hrl").
 
 
 start(State) ->
   register_node(State#state.name, self()),
-  loop(NewState).
+  loop(State).
 
 loop(State) ->
   log("~p", [State]),
@@ -89,7 +88,7 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
                   end,
 
   lists:foreach(
-    fun(Edge) -> send_initiate_message(Level, FragName, NodeState, Edge) end,
+    fun(EdgeElem) -> send_initiate_message(Level, FragName, NodeState, EdgeElem) end,
     BranchList ),
 
   AfterState = LState#state { find_count = NewFindCount },
@@ -126,39 +125,35 @@ test(State) ->
 send_test_message(FragmentLevel, FragmentName, Edge) ->
   get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
-handle_test_message(State, Level, FragName, Neighbour_edge) ->
-  %%Fallunterscheidung:
-  {Weight, Edge} = util:get_edge_by_neighbour_edge(Neighbour_edge),
-
-  if FragName == State#state.fragment_name ->
-    %%Kante als rejected makieren
-    NewEdge = Edge#edge { type = rejected},
-    Modified_edge_list = util:replace_edge(State#state.edges, Edge, NewEdge),
-    NewState = State#state { edges = Modified_edge_list },
-
-    %%verschicke rejected nachricht
-    Send_edge = {
-                  NewEdge#edge.weight,
-                  NewEdge#edge.node_1#node.name,
-                  NewEdge#edge.node_2#node.name
-                },
-
-    get_target_pid(NewEdge) ! {reject, Send_edge},
-    %%ausnahme - s3 TODO what?
-    NewState;
-   FragName /= State#state.fragment_name, State#state.fragment_level >= Level ->
-    %%sende accept über die kante
-    Send_edge = {
-                  Edge#edge.weight,
-                  Edge#edge.node_1,
-                  Edge#edge.node_2
-                },
-    get_target_pid(Edge) ! {accept, Send_edge},
-    State;
-  FragName /= State#state.fragment_name, State#state.fragment_level < Level ->
-    %%antwort verzögern bzw nicht antworten
-    State
-  end.
+handle_test_message(InState, Level, FragName, NeighbourEdge) ->
+  State = case InState#state.status == sleeping of
+            true -> wakeup(InState)
+          end,
+  if
+    Level > State#state.fragment_level ->
+      self() ! {test, Level, FragName, NeighbourEdge},
+      State;
+    FragName /= State#state.fragment_name ->
+      NEdge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
+      NEdge#edge.node_2#node.pid ! {accept, NeighbourEdge},
+      State;
+    true ->
+      NEdge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
+      case NEdge#edge.type == basic of
+        true ->
+          Rejected = NEdge#edge { type = rejected },
+          AktState = State#state { edges = util:replace_edge(State#state.edges,
+                                                             NEdge,
+                                                             Rejected)},
+          case AktState#state.test_edge /= Rejected of
+            true ->
+              get_target_pid(Rejected) ! {reject, edge_to_tuple(Rejected)},
+              AktState;
+            false ->
+              test(AktState)
+          end
+        end
+      end.
 
 handle_accept_message(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
