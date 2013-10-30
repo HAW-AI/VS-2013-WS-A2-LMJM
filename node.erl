@@ -77,7 +77,7 @@ wakeup(State) ->
   State#state { edges = NewEdgeList, status = found }.
 
 handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
-  Edge = util:get_edge_by_neighbour_edge(SourceEdge),
+  Edge = util:get_edge_by_neighbour_edge(State#state.edges, SourceEdge),
   LState = State#state {
                         fragment_level = Level,
                         fragment_name = FragName,
@@ -168,7 +168,7 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
       end.
 
 handle_accept_message(State, NeighbourEdge) ->
-  Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
+  Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
                                    true -> {Edge#edge.weight, Edge};
                                    false -> {State#state.best_weight, State#state.best_edge}
@@ -181,7 +181,7 @@ handle_accept_message(State, NeighbourEdge) ->
   report(NewState).
 
 handle_reject_message(State, NeighbourEdge) ->
-  Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
+  Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   case Edge#edge.type of
     basic ->
       NewEdge = Edge#edge{ type = rejected },
@@ -191,7 +191,7 @@ handle_reject_message(State, NeighbourEdge) ->
   end.
 
 handle_report_message(State, Weight, NeighbourEdge) ->
-  Edge = util:get_edge_by_neighbour_edge(NeighbourEdge),
+  Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   case State#state.in_branch /= Edge of
     true ->
       {NewBestWeight, NewBestEdge} = case Weight < State#state.best_weight of
