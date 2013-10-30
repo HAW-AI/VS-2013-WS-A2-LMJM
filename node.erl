@@ -138,7 +138,8 @@ send_test_message(FragmentLevel, FragmentName, Edge) ->
 
 handle_test_message(InState, Level, FragName, NeighbourEdge) ->
   State = case InState#state.status == sleeping of
-            true -> wakeup(InState)
+            true -> wakeup(InState);
+            false -> InState
           end,
   if
     Level > State#state.fragment_level ->
