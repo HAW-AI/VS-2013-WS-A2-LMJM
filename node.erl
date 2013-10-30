@@ -57,15 +57,14 @@ register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).
 
 wakeup(State) ->
-  %%Finde akmg in basic edges
-  [ First | _ ] = State#state.edges,
+  [ FirstEdge | _ ] = State#state.edges,
   Akmg = lists:foldl(
            fun(Edge, Akmg) -> case Edge#edge.weight < Akmg#edge.weight of
                                 true -> Edge;
                                 false -> Akmg
                               end
            end,
-           First,
+           FirstEdge,
            State#state.edges
           ),
 
@@ -87,16 +86,14 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
                         best_weight = infinity
                        },
 
-  BranchList = list:filter(
+  BranchList = lists:filter(
                 fun(Elem) -> (Elem /= Edge) and (Elem#edge.type == branch) end,
                 LState#state.edges
               ),
 
   NewFindCount =  case NodeState == find of
-                    true ->
-                      LState#state.find_count + length(BranchList);
-                    false ->
-                      LState#state.find_count
+                    true -> LState#state.find_count + length(BranchList);
+                    false -> LState#state.find_count
                   end,
 
   lists:foreach(
@@ -121,12 +118,14 @@ test(State) ->
 
   case length(BasicEdges) > 0 of
     true ->
+      [ FirstEdge | _ ] = BasicEdges,
       TestEdge = lists:foldl(
                 fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
                                       true -> Edge;
                                       false-> Akmg
                                     end
                 end,
+                FirstEdge,
                 BasicEdges),
       send_test_message(State#state.fragment_level, State#state.fragment_name, TestEdge),
       State#state { test_edge = TestEdge };
