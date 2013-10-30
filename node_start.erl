@@ -12,12 +12,7 @@
 
 main(ConfigFile) ->
   Lines = read_lines(ConfigFile),
-
-  log("ladida ~p", [self()]),
-
   NodeName = get_node_name(ConfigFile),
-
-  log("ladida~s", [""]),
 
   %%Generiere lokale umgebung des Nodes/Knoten
   Edges = get_edges_from_config(NodeName, get_config_from_lines(Lines)),
@@ -31,9 +26,7 @@ main(ConfigFile) ->
     fragment_name = undefined
   },
 
-  Pid = spawn(fun() -> node:start(NodeState) end),
-  log("Pid ~p", [Pid]),
-  io:fread("", "~c").
+  Pid = spawn(fun() -> node:start(NodeState) end).
 
 read_lines(File) ->
   {ok, IoDevice} = file:open(File, read),
@@ -89,7 +82,7 @@ get_edges_from_config(ParentNodeName, Config) ->
 
 
 log(Format, Data) ->
-  io_lib:format("node: " ++ Format ++ "~n", Data).
+  io:format("node: " ++ Format ++ "~n", Data).
 
 
 

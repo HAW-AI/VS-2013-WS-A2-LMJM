@@ -1,4 +1,4 @@
 #!/bin/sh
 
 erlc node_start.erl util.erl node.erl
-./bin/noderunner
+./bin/noderunner $1

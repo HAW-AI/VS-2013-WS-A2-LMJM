@@ -6,11 +6,15 @@
 -compile(util).
 -compile(node).
 
-main(_) ->
-  Path = "nodes/",
+main([Path]) ->
+  io:format("reading conf files from ~p~n", [Path]),
+  {ok, Files} = file:list_dir(Path),
 
   lists:foreach(
-    fun(Num) -> node_start:main(lists:concat([Path, "node_", Num, ".conf"])) end,
-    lists:seq(0, 6)
-  ),
+    fun(File) ->
+        FileName = string:concat(Path, string:concat("/", File)),
+        node_start:main(FileName)
+    end,
+    Files
+   ),
   io:fread("", "~c").
