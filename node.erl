@@ -225,9 +225,6 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
 
 handle_accept_message(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
-  log("~p ~p NEIGHBOUR EDGE", [State#state.name, NeighbourEdge]),
-  log("~p ~p EDGE", [State#state.name, Edge]),
-
   {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
                                    true -> {Edge#edge.weight, Edge};
                                    false -> {State#state.best_weight, State#state.best_edge}
