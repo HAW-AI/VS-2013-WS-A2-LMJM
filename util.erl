@@ -26,6 +26,22 @@ get_edge_by_neighbour_edge(Edge_list, {Weight, Nodex, Nodey}) ->
 log(Format, Data) ->
   io:format(Format ++ "~n", Data).
 
+get_akmg_from_basic_edges(EdgeList) ->
+  Edges = lists:filter(
+                  fun(Edge) -> Edge#edge.type == basic end,
+                  EdgeList),
+
+  [ FirstEdge | _ ] = Edges,
+  lists:foldl(
+           fun(Edge, Akmg) -> case Edge#edge.weight < Akmg#edge.weight of
+                                true -> Edge;
+                                false -> Akmg
+                              end
+           end,
+           FirstEdge,
+           Edges
+          ).
+
 %%Testcases
 replace_edge_test()->
   Edge_1 = #edge {
@@ -83,3 +99,12 @@ get_edge_by_neighbour_edge_test() ->
 
   ?assertEqual(Edge_1, get_edge_by_neighbour_edge(Edge_list, {1, zwei, eins})),
   ?assertEqual(Edge_2, get_edge_by_neighbour_edge(Edge_list, {4, vier, drei})).
+
+get_akmg_from_basic_edges_test() ->
+  Edge_1 = #edge {node_1 = eins, node_2 = zwei, weight = 2, type = basic},
+  Edge_2 = #edge {node_1 = drei, node_2 = vier, weight = 4, type = branch},
+  Edge_3 = #edge {node_1 = fuenf, node_2 = sechs, weight = 6, type = basic},
+
+  EdgeList = [Edge_1, Edge_2, Edge_3],
+
+  ?assertEqual(Edge_1, get_akmg_from_basic_edges(EdgeList)).
