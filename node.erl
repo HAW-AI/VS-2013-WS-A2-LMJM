@@ -13,24 +13,31 @@ loop(State) ->
 
   receive
     {initiate,Level,FragName,NodeState,Edge} ->
+      log("~p received initiate on edge ~p", [State#state.name, Edge]),
       NewState = handle_initiate_message(State, Level, FragName, NodeState, Edge),
       loop(NewState);
     {test,Level,FragName,Edge} ->
+      log("~p received test on edge ~p", [State#state.name, Edge]),
       NewState = handle_test_message(State, Level, FragName, Edge),
       loop(NewState);
     {accept,Edge} ->
+      log("~p received accept on edge ~p", [State#state.name, Edge]),
       NewState = handle_accept_message(State, Edge),
       loop(NewState);
     {reject,Edge} ->
+      log("~p received reject on edge ~p", [State#state.name, Edge]),
       NewState = handle_reject_message(State, Edge),
       loop(NewState);
     {report,Weight,Edge} ->
+      log("~p received report on edge ~p", [State#state.name, Edge]),
       NewState = handle_report_message(State, Weight, Edge),
       loop(NewState);
-    {changeroot,_} ->
+    {changeroot,Edge} ->
+      log("~p received changeroot on edge ~p", [State#state.name, Edge]),
       NewState = handle_changeroot_mesage(State),
       loop(NewState);
     {connect,Level,Edge} ->
+      log("~p received connect on edge ~p", [State#state.name, Edge]),
       NewState = handle_connect_message(State, Level, Edge),
       loop(NewState)
   end.
