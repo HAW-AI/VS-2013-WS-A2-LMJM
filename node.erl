@@ -241,13 +241,13 @@ handle_accept_message(State, NeighbourEdge) ->
 
 handle_reject_message(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
-  case Edge#edge.type of
+  NewState = case Edge#edge.type of
     basic ->
       NewEdge = Edge#edge{ type = rejected },
-      NewState = State#state { edges = util:replace_edge(State#state.edges, Edge, NewEdge) },
-      test(NewState);
+      State#state { edges = util:replace_edge(State#state.edges, Edge, NewEdge) };
     _ -> State
-  end.
+  end,
+  test(NewState).
 
 report(State) ->
   case (State#state.find_count == 0) and (State#state.test_edge == undefined) of
