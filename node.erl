@@ -163,7 +163,8 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
               AktState;
             false ->
               test(AktState)
-          end
+          end;
+        false -> State
         end
       end.
 
