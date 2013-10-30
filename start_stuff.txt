@@ -1,0 +1,4 @@
+c(node). c(node_start). c(util).
+node_start:main("./nodes/node_0.conf").
+global:whereis_name(node_0).
+

@@ -238,42 +238,42 @@ change_root(State) ->
   State.
 
 handle_connect_message(State, Level, Edge) ->
-  NewState =  case State#state.status == sleeping of
-                true -> wakeup(State)
-              end,
+  NewState = case State#state.status == sleeping of
+               true -> wakeup(State);
+               _ -> State
+             end,
 
   LocalEdge = util:get_edge_by_neighbour_edge(NewState#state.edges, Edge),
+  if
+    Level < NewState#state.fragment_level ->
+      %%Makiere LocalEdge als branch
+      Branch = LocalEdge#edge { type = branch },
+      AktState = State#state { edges = util:replace_edge(State#state.edges,
+                                                         LocalEdge,
+                                                         Branch)},
+      %%Sende initiate ueber LocalEdge
+      send_initiate_message(AktState#state.fragment_level,
+                            AktState#state.fragment_name,
+                            AktState#state.status,
+                            Branch),
 
-    if
-      Level < NewState#state.fragment_level ->
-        %%Makiere LocalEdge als branch
-        Branch = LocalEdge#edge { type = branch },
-        AktState = State#state { edges = util:replace_edge(State#state.edges,
-                                                           LocalEdge,
-                                                           Branch)},
-        %%Sende initiate ueber LocalEdge
-        send_initiate_message(AktState#state.fragment_level,
-                              AktState#state.fragment_name,
-                              AktState#state.status,
-                              Branch),
 
-
-        case AktState#state.status == find of
-          true ->
-            %%Addiere 1 auf find-count
-            AktState#state { find_count = AktState#state.find_count + 1 };
-          false ->
-            NewState
-        end;
-      LocalEdge#edge.type == basic ->
-        %%Place message on end of queue
-        self() ! {connect, Level, Edge},
-        NewState;
-      true ->
-        %%Sende Initiate
-        send_initiate_message(NewState#state.fragment_level + 1,
-                              LocalEdge#edge.weight,
-                              find,
-                              LocalEdge),
-        NewState
-    end.
+      case AktState#state.status == find of
+        true ->
+          %%Addiere 1 auf find-count
+          AktState#state { find_count = AktState#state.find_count + 1 };
+        false ->
+          NewState
+      end;
+    LocalEdge#edge.type == basic ->
+      %%Place message on end of queue
+      self() ! {connect, Level, Edge},
+      NewState;
+    true ->
+      %%Sende Initiate
+      send_initiate_message(NewState#state.fragment_level + 1,
+                            LocalEdge#edge.weight,
+                            find,
+                            LocalEdge),
+      NewState
+  end.
