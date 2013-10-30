@@ -76,14 +76,15 @@ register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).
 
 wakeup(State) ->
-  Akmg = util:get_akmg_from_basic_edges(State#state.edges),
+  BestEdge = util:get_best_edge_from_basic_edges(State#state.edges),
 
-  %%Makiere Edge als branch
-  AsBranch = Akmg#edge { type = branch },
-  NewEdgeList = util:replace_edge(State#state.edges, Akmg, AsBranch),
+  NewEdgeList = util:replace_edge(
+                  State#state.edges,
+                  BestEdge,
+                  BestEdge#edge { type = branch }),
 
-  log("sending connect to ~p", [Akmg#edge.node_2]),
-  get_target_pid(Akmg) ! { connect, 0, edge_to_tuple(Akmg) },
+  log("sending connect to ~p", [BestEdge#edge.node_2]),
+  get_target_pid(BestEdge) ! { connect, 0, edge_to_tuple(BestEdge) },
 
   State#state {
     edges = NewEdgeList,
@@ -92,75 +93,75 @@ wakeup(State) ->
     find_count = 0
    }.
 
-handle_connect_message(State, Level, Edge) ->
+handle_connect_message(State, Level, NeighbourEdge) ->
   NewState = case State#state.status == sleeping of
                true -> wakeup(State);
                _ -> State
              end,
+  Edge = util:get_edge_by_neighbour_edge(NewState#state.edges, NeighbourEdge),
 
-  LocalEdge = util:get_edge_by_neighbour_edge(NewState#state.edges, Edge),
   if
     Level < NewState#state.fragment_level ->
-      Branch = LocalEdge#edge { type = branch },
+      Branch = Edge#edge { type = branch },
       AktState = State#state { edges = util:replace_edge(State#state.edges,
-                                                         LocalEdge,
+                                                         Edge,
                                                          Branch)},
+
       send_initiate_message(AktState#state.fragment_level,
                             AktState#state.fragment_name,
                             AktState#state.status,
                             Branch),
 
-
       case AktState#state.status == find of
         true ->
           AktState#state { find_count = AktState#state.find_count + 1 };
         false ->
-          NewState
+          AktState
       end;
 
-    LocalEdge#edge.type == basic ->
+    Edge#edge.type == basic ->
       log("relaying connect to myself", []),
       self() ! {connect, Level, Edge},
       NewState;
     true ->
       send_initiate_message(NewState#state.fragment_level + 1,
-                            LocalEdge#edge.weight,
+                            Edge#edge.weight,
                             find,
-                            LocalEdge),
+                            Edge),
       NewState
   end.
 
-handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
-  Edge = util:get_edge_by_neighbour_edge(State#state.edges, SourceEdge),
-  LState = State#state {
-                        status = NodeState,
+handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
+  Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
+
+  BranchList = lists:filter(
+                 fun(Elem) -> (Elem /= Edge) and (Elem#edge.type == branch) end,
+                 State#state.edges
+                ),
+
+  NewFindCount = case NodeStatus == find of
+                   true -> State#state.find_count + length(BranchList);
+                   false -> State#state.find_count
+                 end,
+
+  lists:foreach(
+    fun(EdgeElem) -> send_initiate_message(Level, FragName, NodeStatus, EdgeElem) end,
+    BranchList
+   ),
+
+  NewState = State#state {
+                        status = NodeStatus,
                         fragment_level = Level,
                         fragment_name = FragName,
                         in_branch = Edge,
                         best_edge = undefined,
-                        best_weight = infinity
+                        best_weight = infinity,
+                        find_count = NewFindCount
                        },
 
-  BranchList = lists:filter(
-                 fun(Elem) -> (Elem /= Edge) and (Elem#edge.type == branch) end,
-                 LState#state.edges
-                ),
-
-  NewFindCount = case NodeState == find of
-                   true -> LState#state.find_count + length(BranchList);
-                   false -> LState#state.find_count
-                 end,
-
-  lists:foreach(
-    fun(EdgeElem) -> send_initiate_message(Level, FragName, NodeState, EdgeElem) end,
-    BranchList
-   ),
-
-  AfterState = LState#state { find_count = NewFindCount },
-
-  case NodeState == find of
-    true -> test(AfterState);
-    false -> AfterState
+  case NodeStatus == find of
+    true -> test(NewState);
+    false -> NewState
   end.
 
 send_initiate_message(FragmentLevel, FragmentName, NodeState, Edge) ->
@@ -175,7 +176,7 @@ test(State) ->
 
   case length(BasicEdges) > 0 of
     true ->
-      TestEdge = util:get_akmg_from_basic_edges(BasicEdges),
+      TestEdge = util:get_best_edge_from_basic_edges(BasicEdges),
       send_test_message(State#state.fragment_level, State#state.fragment_name, TestEdge),
       State#state { test_edge = TestEdge };
     false ->

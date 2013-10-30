@@ -26,7 +26,7 @@ get_edge_by_neighbour_edge(Edge_list, {Weight, Nodex, Nodey}) ->
 log(Format, Data) ->
   io:format(Format ++ "~n", Data).
 
-get_akmg_from_basic_edges(EdgeList) ->
+get_best_edge_from_basic_edges(EdgeList) ->
   Edges = lists:filter(
                   fun(Edge) -> Edge#edge.type == basic end,
                   EdgeList),
@@ -107,4 +107,4 @@ get_akmg_from_basic_edges_test() ->
 
   EdgeList = [Edge_1, Edge_2, Edge_3],
 
-  ?assertEqual(Edge_1, get_akmg_from_basic_edges(EdgeList)).
+  ?assertEqual(Edge_1, get_best_edge_from_basic_edges(EdgeList)).
