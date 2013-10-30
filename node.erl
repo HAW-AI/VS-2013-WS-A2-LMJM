@@ -14,7 +14,9 @@ loop(State) ->
 
   receive
     wakeup ->
-      loop(wakeup(State));
+      log("~p received wakeup", [State#state.name]),
+      NewState = wakeup(State),
+      loop(NewState);
     {initiate,Level,FragName,NodeState,Edge} ->
       log("~p received initiate on edge ~p", [State#state.name, Edge]),
       NewState = handle_initiate_message(State, Level, FragName, NodeState, Edge),
@@ -62,6 +64,7 @@ wakeup(State) ->
                           false -> Akmg
                         end
     end,
+    #edge { weight = 99999999999999 },
     State#state.edges
   ),
 

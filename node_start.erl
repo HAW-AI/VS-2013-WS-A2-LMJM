@@ -65,14 +65,20 @@ split_string(String, Char) ->
   end.
 
 get_config_from_lines(Lines) ->
-  [split_string(Line, ",") || Line <- Lines].
+  StringList = [split_string(Line, ",") || Line <- Lines],
+  lists:map(fun ({WeightString, NodeString}) ->
+                  {Weight, _} = string:to_integer(WeightString),
+                  Node = list_to_atom(NodeString),
+                  {Weight, Node}
+                end,
+                StringList).
 
 %%Initialisiert die Edges mit unbekannter PID der nodes
 get_edges_from_config(ParentNodeName, Config) ->
   [
    #edge {
-    node_1 = #node { name = list_to_atom(ParentNodeName), pid = undefined },
-    node_2 = #node { name = list_to_atom(NodeName), pid = undefined },
+    node_1 = #node { name = ParentNodeName, pid = undefined },
+    node_2 = #node { name = NodeName, pid = undefined },
     weight = Weight,
     type = basic
   } || {Weight, NodeName} <- Config ].
@@ -94,24 +100,24 @@ split_string_test() ->
 get_config_from_lines_test() ->
   Lines = ["1,node_0\n", "2, node_4\n"],
   Lines2 = ["1,node_0", "2, node_4"],
-  ?assertEqual([{"1", "node_0"}, {"2", "node_4"}], get_config_from_lines(Lines)),
-  ?assertEqual([{"1", "node_0"}, {"2", "node_4"}], get_config_from_lines(Lines2)).
+  ?assertEqual([{1, node_0}, {2, node_4}], get_config_from_lines(Lines)),
+  ?assertEqual([{1, node_0}, {2, node_4}], get_config_from_lines(Lines2)).
 
 get_edges_from_config_test() ->
-  Config = [{"1", "node_1"}, {"2", "node_4"}],
-  NodeName = "node_0",
+  Config = [{1, node_1}, {2, node_4}],
+  NodeName = node_0,
 
   Expected_edge_1 = #edge {
     node_1 = #node { name = node_0, pid = undefined },
     node_2 = #node { name = node_1, pid = undefined },
-    weight = "1",
+    weight = 1,
     type = basic
   },
 
   Expected_edge_2 = #edge {
     node_1 = #node { name = node_0, pid = undefined },
     node_2 = #node { name = node_4, pid = undefined },
-    weight = "2",
+    weight = 2,
     type = basic
   },
   ?assertEqual([Expected_edge_1, Expected_edge_2], get_edges_from_config(NodeName, Config)).
