@@ -302,12 +302,13 @@ change_root(State) ->
   case BestEdge#edge.type of
     branch ->
       log("~p sending changeroot to ~p", [State#state.name, BestEdge#edge.node_2]),
-      get_target_pid(BestEdge) ! { changeroot, edge_to_tuple(BestEdge) };
+      get_target_pid(BestEdge) ! { changeroot, edge_to_tuple(BestEdge) },
+      State;
     _ ->
       log("~p sending connect to ~p", [State#state.name, BestEdge#edge.node_2]),
-      get_target_pid(BestEdge) ! { connect, State#state.fragment_level, edge_to_tuple(BestEdge) }
-  end,
-  State#state { edges = util:replace_edge(State#state.edges, BestEdge, BestEdge#edge { type = branch }) }.
+      get_target_pid(BestEdge) ! { connect, State#state.fragment_level, edge_to_tuple(BestEdge) },
+      State#state { edges = util:replace_edge(State#state.edges, BestEdge, BestEdge#edge { type = branch }) }
+  end.
 
 handle_changeroot_mesage(State) ->
   change_root(State).
