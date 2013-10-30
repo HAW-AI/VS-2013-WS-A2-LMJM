@@ -26,7 +26,7 @@ main(ConfigFile) ->
     fragment_name = undefined
   },
 
-  Pid = spawn(fun() -> node:start(NodeState) end).
+  spawn(fun() -> node:start(NodeState) end).
 
 read_lines(File) ->
   {ok, IoDevice} = file:open(File, read),
@@ -74,16 +74,11 @@ get_config_from_lines(Lines) ->
 get_edges_from_config(ParentNodeName, Config) ->
   [
    #edge {
-    node_1 = #node { name = list_to_atom(ParentNodeName), pid=undefined },
-    node_2 = #node { name = list_to_atom(NodeName), pid=undefined },
+    node_1 = #node { name = list_to_atom(ParentNodeName), pid = undefined },
+    node_2 = #node { name = list_to_atom(NodeName), pid = undefined },
     weight = Weight,
     type = basic
   } || {Weight, NodeName} <- Config ].
-
-
-log(Format, Data) ->
-  io:format("node: " ++ Format ++ "~n", Data).
-
 
 
 %%Testcases
@@ -110,15 +105,15 @@ get_edges_from_config_test() ->
   NodeName = "node_0",
 
   Expected_edge_1 = #edge {
-    node_1 = #node { name = NodeName, pid=undefined },
-    node_2 = #node { name = "node_1", pid=undefined },
+    node_1 = #node { name = node_0, pid = undefined },
+    node_2 = #node { name = node_1, pid = undefined },
     weight = "1",
     type = basic
   },
 
   Expected_edge_2 = #edge {
-    node_1 = #node { name = NodeName, pid=undefined },
-    node_2 = #node { name = "node_4", pid=undefined },
+    node_1 = #node { name = node_0, pid = undefined },
+    node_2 = #node { name = node_4, pid = undefined },
     weight = "2",
     type = basic
   },

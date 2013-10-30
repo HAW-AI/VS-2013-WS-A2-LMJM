@@ -144,7 +144,7 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
       State;
     FragName /= State#state.fragment_name ->
       NEdge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
-      NEdge#edge.node_2#node.pid ! {accept, NeighbourEdge},
+      get_target_pid(NEdge) ! {accept, NeighbourEdge},
       State;
     true ->
       NEdge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
