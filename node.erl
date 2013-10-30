@@ -12,7 +12,7 @@ start(State) ->
 
 loop(State) ->
   log(
-"~p (~p)
+"~p (~p) ~p
   Fragment Name ~p
   Fragment Level ~p,
   Edges ~p
@@ -23,6 +23,7 @@ loop(State) ->
     [
      State#state.name,
      State#state.status,
+     calendar:local_time(),
      State#state.fragment_name,
      State#state.fragment_level,
      State#state.edges,
@@ -31,6 +32,7 @@ loop(State) ->
      State#state.in_branch,
      State#state.test_edge
     ]),
+  timer:sleep(100),
 
   receive
     wakeup ->
@@ -167,9 +169,9 @@ handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
     false -> NewState
   end.
 
-send_initiate_message(State, FragmentLevel, FragmentName, NodeState, Edge) ->
+send_initiate_message(State, FragmentLevel, FragmentName, NodeStatus, Edge) ->
   log("~p sending initiate to ~p", [State#state.name, Edge#edge.node_2]),
-  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeState, edge_to_tuple(Edge)}.
+  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeStatus, edge_to_tuple(Edge)}.
 
 
 test(State) ->
@@ -279,7 +281,9 @@ handle_report_message(State, Weight, NeighbourEdge) ->
           case Weight > State#state.best_weight of
             true -> change_root(State);
             false -> case (State#state.best_weight == ?INFINITY) and (Weight == ?INFINITY) of
-                       true -> log("ending, MST found. i guess :)", []);
+                       true ->
+                         log("~p ending, MST found. i guess :)", [State#state.name]),
+                         exit(normal);
                        false -> noop
                      end
           end
