@@ -57,16 +57,7 @@ register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).
 
 wakeup(State) ->
-  [ FirstEdge | _ ] = State#state.edges,
-  Akmg = lists:foldl(
-           fun(Edge, Akmg) -> case Edge#edge.weight < Akmg#edge.weight of
-                                true -> Edge;
-                                false -> Akmg
-                              end
-           end,
-           FirstEdge,
-           State#state.edges
-          ),
+  Akmg = util:get_akmg_from_basic_edges(State#state.edges),
 
   %%Makiere Edge als branch
   AsBranch = Akmg#edge { type = branch },
@@ -118,15 +109,7 @@ test(State) ->
 
   case length(BasicEdges) > 0 of
     true ->
-      [ FirstEdge | _ ] = BasicEdges,
-      TestEdge = lists:foldl(
-                fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
-                                      true -> Edge;
-                                      false-> Akmg
-                                    end
-                end,
-                FirstEdge,
-                BasicEdges),
+      TestEdge = util:get_akmg_from_basic_edges(BasicEdges),
       send_test_message(State#state.fragment_level, State#state.fragment_name, TestEdge),
       State#state { test_edge = TestEdge };
     false ->
