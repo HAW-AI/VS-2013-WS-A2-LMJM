@@ -58,20 +58,22 @@ register_node(NodeName, Pid) ->
 
 wakeup(State) ->
   %%Finde akmg in basic edges
+  [ First | _ ] = State#state.edges,
   Akmg = lists:foldl(
-    fun(Edge, Akmg) ->  case Edge#edge.weight < Akmg#edge.weight of
-                          true -> Edge;
-                          false -> Akmg
-                        end
-    end,
-    #edge { weight = 99999999999999 },
-    State#state.edges
-  ),
+           fun(Edge, Akmg) -> case Edge#edge.weight < Akmg#edge.weight of
+                                true -> Edge;
+                                false -> Akmg
+                              end
+           end,
+           First,
+           State#state.edges
+          ),
 
   %%Makiere Edge als branch
   AsBranch = Akmg#edge { type = branch },
   NewEdgeList = util:replace_edge(State#state.edges, Akmg, AsBranch),
 
+  get_target_pid(Akmg) ! { connect, State#state.fragment_level, edge_to_tuple(Akmg) },
   State#state { edges = NewEdgeList, status = found }.
 
 handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
