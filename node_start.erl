@@ -16,7 +16,7 @@ main(ConfigFile) ->
 
   %%Init state of this node
   NodeState = #state {
-    name = list_to_atom(NodeName),
+    name = NodeName,
     edges = Edges,
     status = sleeping,
     fragment_level = 0,
@@ -37,7 +37,7 @@ read_lines_recursion(eof, IoDevice, List) ->
   List.
 
 get_node_name(ConfigFile) ->
-  case rstr(ConfigFile, "/") > 0 of
+  Name = case rstr(ConfigFile, "/") > 0 of
     true ->
       Index_1 = rstr(ConfigFile, "/") + 1,
       Index_2 = rstr(ConfigFile, "."),
@@ -45,7 +45,8 @@ get_node_name(ConfigFile) ->
     false ->
       Index_1 = rstr(ConfigFile, "."),
       substr(ConfigFile, 1, Index_1 - 1)
-  end.
+  end,
+  list_to_atom(Name).
 
 
 
@@ -86,9 +87,9 @@ get_edges_from_config(ParentNodeName, Config) ->
 
 %%Testcases
 get_node_name_test() ->
-  ?assertEqual("node_1", get_node_name("node_1.conf")),
-  ?assertEqual("node_1", get_node_name("nodes/node_1.conf")),
-  ?assertEqual("node_1", get_node_name("n/o/d/e/s/node_1.cfg")).
+  ?assertEqual(node_1, get_node_name("node_1.conf")),
+  ?assertEqual(node_1, get_node_name("nodes/node_1.conf")),
+  ?assertEqual(node_1, get_node_name("n/o/d/e/s/node_1.cfg")).
 
 split_string_test() ->
   ?assertEqual({"ladida", "ladida"}, split_string("ladida,ladida", ",")),
