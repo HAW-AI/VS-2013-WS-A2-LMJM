@@ -123,7 +123,7 @@ handle_connect_message(State, Level, NeighbourEdge) ->
 
     Edge#edge.type == basic ->
       log("~p relaying connect to myself", [State#state.name]),
-      self() ! {connect, Level, Edge},
+      self() ! {connect, Level, NeighbourEdge},
       NewState;
     true ->
       send_initiate_message(NewState,
