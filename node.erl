@@ -48,10 +48,10 @@ loop(State) ->
   end.
 
 get_target_pid(Edge) ->
-  global:whereis_name(Edge#edge.node_2#node.name).
+  global:whereis_name(Edge#edge.node_2).
 
 edge_to_tuple(Edge) ->
-  { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name }.
+  { Edge#edge.weight, Edge#edge.node_1, Edge#edge.node_2 }.
 
 register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).

@@ -75,8 +75,8 @@ get_config_from_lines(Lines) ->
 get_edges_from_config(ParentNodeName, Config) ->
   [
    #edge {
-    node_1 = #node { name = ParentNodeName, pid = undefined },
-    node_2 = #node { name = NodeName, pid = undefined },
+    node_1 = ParentNodeName,
+    node_2 = NodeName,
     weight = Weight,
     type = basic
   } || {Weight, NodeName} <- Config ].
@@ -106,15 +106,15 @@ get_edges_from_config_test() ->
   NodeName = node_0,
 
   Expected_edge_1 = #edge {
-    node_1 = #node { name = node_0, pid = undefined },
-    node_2 = #node { name = node_1, pid = undefined },
+    node_1 = node_0,
+    node_2 = node_1,
     weight = 1,
     type = basic
   },
 
   Expected_edge_2 = #edge {
-    node_1 = #node { name = node_0, pid = undefined },
-    node_2 = #node { name = node_4, pid = undefined },
+    node_1 = node_0,
+    node_2 = node_4,
     weight = 2,
     type = basic
   },

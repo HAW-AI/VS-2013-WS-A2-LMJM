@@ -13,11 +13,6 @@
   fragment_level = 0
 }).
 
--record(node, {
-  name,
-  pid
-}).
-
 -record(edge, {
   node_1,
   node_2,

@@ -14,8 +14,8 @@ replace_edge(List, Old_elem, New_elem) ->
 get_edge_by_neighbour_edge(Edge_list, {Weight, Nodex, Nodey}) ->
   List_tmp = lists:filter(
                 fun(Elem) -> (Elem#edge.weight == Weight) and
-                             (Elem#edge.node_1#node.name == Nodey) and
-                             (Elem#edge.node_2#node.name == Nodex)
+                             (Elem#edge.node_1 == Nodey) and
+                             (Elem#edge.node_2 == Nodex)
                 end,
                 Edge_list),
   case length(List_tmp) >  0 of
@@ -29,29 +29,29 @@ log(Format, Data) ->
 %%Testcases
 replace_edge_test()->
   Edge_1 = #edge {
-    node_1 = #node { name = "eins", pid = undefined },
-    node_2 = #node { name = "zwei", pid = undefined },
+    node_1 = eins,
+    node_2 = zwei,
     weight = 1,
     type   = basic
   },
 
   Edge_2 = #edge {
-    node_1 = #node { name = "drei", pid = undefined },
-    node_2 = #node { name = "vier", pid = undefined },
+    node_1 = drei,
+    node_2 = vier,
     weight = 4,
     type   = rejected
   },
 
   Edge_1_changed = #edge {
-    node_1 = #node { name = "eins", pid = undefined },
-    node_2 = #node { name = "zwei", pid = undefined },
+    node_1 = eins,
+    node_2 = zwei,
     weight = 1,
     type   = branch
   },
 
   Edge_2_changed = #edge {
-    node_1 = #node { name = "drei", pid = undefined },
-    node_2 = #node { name = "vier", pid = undefined },
+    node_1 = drei,
+    node_2 = vier,
     weight = 4,
     type   = rejected
   },
@@ -66,20 +66,20 @@ replace_edge_test()->
 get_edge_by_neighbour_edge_test() ->
   %Edge_list, {Weight, Nodex, Nodey}
   Edge_1 = #edge {
-    node_1 = #node { name = "eins", pid = undefined },
-    node_2 = #node { name = "zwei", pid = undefined },
-    weight = "1",
+    node_1 = eins,
+    node_2 = zwei,
+    weight = 1,
     type   = basic
   },
 
   Edge_2 = #edge {
-    node_1 = #node { name = "drei", pid = undefined },
-    node_2 = #node { name = "vier", pid = undefined },
-    weight = "4",
+    node_1 = drei,
+    node_2 = vier,
+    weight = 4,
     type   = rejected
   },
 
   Edge_list = [Edge_1, Edge_2],
 
-  ?assertEqual(Edge_1, get_edge_by_neighbour_edge(Edge_list, {"1", "zwei", "eins"})),
-  ?assertEqual(Edge_2, get_edge_by_neighbour_edge(Edge_list, {"4", "vier", "drei"})).
+  ?assertEqual(Edge_1, get_edge_by_neighbour_edge(Edge_list, {1, zwei, eins})),
+  ?assertEqual(Edge_2, get_edge_by_neighbour_edge(Edge_list, {4, vier, drei})).
