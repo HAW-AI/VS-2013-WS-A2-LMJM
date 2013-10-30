@@ -4,6 +4,7 @@
 -include_lib("datastructures.hrl").
 -import(util, [log/2]).
 
+-define(INFINITY, 999999999999).
 
 start(State) ->
   yes = register_node(State#state.name, self()),
@@ -155,7 +156,7 @@ handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
                         fragment_name = FragName,
                         in_branch = Edge,
                         best_edge = undefined,
-                        best_weight = infinity,
+                        best_weight = ?INFINITY,
                         find_count = NewFindCount
                        },
 
@@ -225,10 +226,7 @@ handle_accept_message(State, NeighbourEdge) ->
   log("~p ~p NEIGHBOUR EDGE", [State#state.name, NeighbourEdge]),
   log("~p ~p EDGE", [State#state.name, Edge]),
 
-  ApplyNewEdgeCondition = (State#state.best_weight == infinity)
-    orelse (Edge#edge.weight < State#state.best_weight),
-
-  {NewBestWeight, NewBestEdge} = case ApplyNewEdgeCondition of
+  {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
                                    true -> {Edge#edge.weight, Edge};
                                    false -> {State#state.best_weight, State#state.best_edge}
                                  end,
@@ -263,10 +261,7 @@ handle_report_message(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   case State#state.in_branch /= Edge of
     true ->
-      ApplyNewEdgeCondition = (State#state.best_weight == infinity)
-        orelse (Weight < State#state.best_weight),
-
-      {NewBestWeight, NewBestEdge} = case ApplyNewEdgeCondition of
+      {NewBestWeight, NewBestEdge} = case Weight < State#state.best_weight of
                                        true -> {Weight, Edge};
                                        false -> {State#state.best_weight, State#state.best_edge}
                                      end,
@@ -284,7 +279,7 @@ handle_report_message(State, Weight, NeighbourEdge) ->
         _ ->
           case Weight > State#state.best_weight of
             true -> change_root(State);
-            false -> case (State#state.best_weight == infinity) and (Weight == infinity) of
+            false -> case (State#state.best_weight == ?INFINITY) and (Weight == ?INFINITY) of
                        true -> log("ending, MST found. i guess :)", []);
                        false -> noop
                      end
