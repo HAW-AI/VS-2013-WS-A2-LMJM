@@ -10,7 +10,22 @@ start(State) ->
   loop(State).
 
 loop(State) ->
-  log("~p", [State]),
+  log(
+"~p (~p)
+  Edges ~p
+  Best Edge ~p
+  Best Weight ~p
+  Fragment Name ~p
+  Fragment Level ~p",
+    [
+     State#state.name,
+     State#state.status,
+     State#state.edges,
+     State#state.best_edge,
+     State#state.best_weight,
+     State#state.fragment_name,
+     State#state.fragment_level
+    ]),
 
   receive
     wakeup ->
