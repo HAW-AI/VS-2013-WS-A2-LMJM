@@ -2,6 +2,7 @@
 -export([start/1]).
 
 -include_lib("datastructures.hrl").
+-import(util, [log/2]).
 
 
 start(State) ->
@@ -49,9 +50,6 @@ get_target_pid(Edge) ->
 
 edge_to_tuple(Edge) ->
   { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name }.
-
-log(Format, Data) ->
-  io:format(Format ++ "~n", Data).
 
 register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).

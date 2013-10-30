@@ -2,9 +2,6 @@
 -export([main/1, split_string/2]).
 -import(string, [rstr/2, len/1, substr/3, sub_string/3, strip/1]).
 
-%%Node Loop einbinden
--import(node_impl, [start/1]).
-
 -include_lib("eunit/include/eunit.hrl").
 
 %%Records einbinden

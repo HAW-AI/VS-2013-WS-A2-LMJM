@@ -23,6 +23,8 @@ get_edge_by_neighbour_edge(Edge_list, {Weight, Nodex, Nodey}) ->
     false -> not_found
   end.
 
+log(Format, Data) ->
+  io:format(Format ++ "~n", Data).
 
 %%Testcases
 replace_edge_test()->
