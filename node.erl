@@ -224,7 +224,11 @@ handle_accept_message(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   log("~p ~p NEIGHBOUR EDGE", [State#state.name, NeighbourEdge]),
   log("~p ~p EDGE", [State#state.name, Edge]),
-  {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
+
+  ApplyNewEdgeCondition = (State#state.best_weight == infinity)
+    orelse (Edge#edge.weight < State#state.best_weight),
+
+  {NewBestWeight, NewBestEdge} = case ApplyNewEdgeCondition of
                                    true -> {Edge#edge.weight, Edge};
                                    false -> {State#state.best_weight, State#state.best_edge}
                                  end,
@@ -259,7 +263,10 @@ handle_report_message(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   case State#state.in_branch /= Edge of
     true ->
-      {NewBestWeight, NewBestEdge} = case Weight < State#state.best_weight of
+      ApplyNewEdgeCondition = (State#state.best_weight == infinity)
+        orelse (Weight < State#state.best_weight),
+
+      {NewBestWeight, NewBestEdge} = case ApplyNewEdgeCondition of
                                        true -> {Weight, Edge};
                                        false -> {State#state.best_weight, State#state.best_edge}
                                      end,
