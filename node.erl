@@ -125,7 +125,7 @@ handle_connect_message(State, Level, NeighbourEdge) ->
 
     true ->
       if Edge#edge.type == basic ->
-        log("~p relaying connect to myself", [State#state.name]),
+        log("~p relaying connect to itself", [State#state.name]),
         self() ! {connect, Level, NeighbourEdge},
         NewState;
       true ->
@@ -142,7 +142,7 @@ handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
 
   BranchList = lists:filter(
-                 fun(Elem) -> (Elem /= Edge) and (Elem#edge.type == branch) end,
+                 fun(Elem) -> (not util:are_edges_equal(Elem, Edge)) and (Elem#edge.type == branch) end,
                  State#state.edges
                 ),
 
@@ -199,32 +199,36 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
             true -> wakeup(InState);
             false -> InState
           end,
-  Edge = util:get_edge_by_neighbour_edge(InState#state.edges, NeighbourEdge),
-  IfState = if
+
+  if
     Level > State#state.fragment_level ->
-      log("~p relaying test to myself", [State#state.name]),
+      log("~p relaying test to itself", [State#state.name]),
       self() ! {test, Level, FragName, NeighbourEdge},
       State;
-    FragName /= State#state.fragment_name ->
-      log("~p sending accept to ~p", [State#state.name, Edge#edge.node_2]),
-      get_target_pid(Edge) ! {accept, edge_to_tuple(Edge)},
-      State;
     true ->
-      case Edge#edge.type == basic of
-        true ->
-          Rejected = Edge#edge { type = rejected },
-          State#state { edges = util:replace_edge(State#state.edges, Edge, Rejected) };
-        false -> State
-      end
-    end,
+      Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
 
-    case IfState#state.test_edge /= Edge of
+      if FragName /= State#state.fragment_name ->
+        log("~p sending accept to ~p", [State#state.name, Edge#edge.node_2]),
+        get_target_pid(Edge) ! {accept, edge_to_tuple(Edge)},
+        State;
       true ->
-        log("~p sending reject to ~p", [State#state.name, Edge#edge.node_2]),
-        get_target_pid(Edge) ! {reject, edge_to_tuple(Edge)},
-        IfState;
-      false ->
-        test(IfState)
+        NewState = case Edge#edge.type == basic of
+          true ->
+            Rejected = Edge#edge { type = rejected },
+            State#state { edges = util:replace_edge(State#state.edges, Edge, Rejected) };
+          false -> State
+        end,
+
+        case not util:are_edges_equal(NewState#state.test_edge, Edge) of
+          true ->
+            log("~p sending reject to ~p", [State#state.name, Edge#edge.node_2]),
+            get_target_pid(Edge) ! {reject, edge_to_tuple(Edge)},
+            NewState;
+          false ->
+            test(NewState)
+        end
+      end
   end.
 
 handle_accept_message(State, NeighbourEdge) ->
@@ -262,7 +266,7 @@ report(State) ->
 
 handle_report_message(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
-  case State#state.in_branch /= Edge of
+  case not util:are_edges_equal(State#state.in_branch, Edge) of
     true ->
       {NewBestWeight, NewBestEdge} = case Weight < State#state.best_weight of
                                        true -> {Weight, Edge};
@@ -277,7 +281,7 @@ handle_report_message(State, Weight, NeighbourEdge) ->
     false ->
       case State#state.status of
         find ->
-          log("~p relaying report to myself", [State#state.name]),
+          log("~p relaying report to itself", [State#state.name]),
           self() ! { report, Weight, NeighbourEdge };
         _ ->
           case Weight > State#state.best_weight of

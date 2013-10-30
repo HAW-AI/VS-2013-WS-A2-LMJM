@@ -12,15 +12,22 @@ replace_edge(List, Old_elem, New_elem) ->
 
 
 get_edge_by_neighbour_edge(Edge_list, {Weight, Nodex, Nodey}) ->
-  List_tmp = lists:filter(
-                fun(Elem) -> (Elem#edge.weight == Weight) and
-                             (Elem#edge.node_1 == Nodey) and
-                             (Elem#edge.node_2 == Nodex)
-                end,
-                Edge_list),
+  TestEdge = #edge { weight = Weight, node_1 = Nodey, node_2 = Nodex },
+  List_tmp = lists:filter(fun(Elem) -> are_edges_equal(Elem, TestEdge) end, Edge_list),
+
   case length(List_tmp) >  0 of
     true -> lists:nth(1, List_tmp);
     false -> not_found
+  end.
+
+are_edges_equal(Edge1, Edge2) ->
+  if
+    (Edge1 == undefined) or (Edge2 == undefined) ->
+      false;
+    true ->
+      (Edge1#edge.weight == Edge2#edge.weight)
+      and (Edge1#edge.node_1 == Edge2#edge.node_1)
+      and (Edge1#edge.node_2 == Edge2#edge.node_2)
   end.
 
 log(Format, Data) ->
