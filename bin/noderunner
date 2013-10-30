@@ -12,9 +12,12 @@ main([Path]) ->
 
   lists:foreach(
     fun(File) ->
-        FileName = string:concat(Path, string:concat("/", File)),
+        FileName = Path ++ "/" ++ File,
         node_start:main(FileName)
     end,
     Files
    ),
+
+  global:whereis_name(node_0) ! wakeup,
+
   io:fread("", "~c").

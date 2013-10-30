@@ -5,13 +5,15 @@
 
 
 start(State) ->
-  register_node(State#state.name, self()),
+  yes = register_node(State#state.name, self()),
   loop(State).
 
 loop(State) ->
   log("~p", [State]),
 
   receive
+    wakeup ->
+      loop(wakeup(State));
     {initiate,Level,FragName,NodeState,Edge} ->
       log("~p received initiate on edge ~p", [State#state.name, Edge]),
       NewState = handle_initiate_message(State, Level, FragName, NodeState, Edge),
@@ -49,7 +51,7 @@ edge_to_tuple(Edge) ->
   { Edge#edge.weight, Edge#edge.node_1#node.name, Edge#edge.node_2#node.name }.
 
 log(Format, Data) ->
-  io:format("node: " ++ Format ++ "~n", Data).
+  io:format(Format ++ "~n", Data).
 
 register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).

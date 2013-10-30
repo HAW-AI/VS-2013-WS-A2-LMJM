@@ -19,7 +19,7 @@ main(ConfigFile) ->
 
   %%Init state of this node
   NodeState = #state {
-    name = NodeName,
+    name = list_to_atom(NodeName),
     edges = Edges,
     status = sleeping,
     fragment_level = 0,
@@ -74,8 +74,8 @@ get_config_from_lines(Lines) ->
 get_edges_from_config(ParentNodeName, Config) ->
   [
    #edge {
-    node_1 = #node { name = ParentNodeName, pid=undefined },
-    node_2 = #node { name = NodeName, pid=undefined },
+    node_1 = #node { name = list_to_atom(ParentNodeName), pid=undefined },
+    node_2 = #node { name = list_to_atom(NodeName), pid=undefined },
     weight = Weight,
     type = basic
   } || {Weight, NodeName} <- Config ].
