@@ -2,15 +2,15 @@
 
 -record(state, {
   name,
-  status,
+  status = sleeping,
   edges,
   best_edge,
   best_weight,
   test_edge,
   in_branch,
-  find_count,
+  find_count = 0,
   fragment_name,
-  fragment_level
+  fragment_level = 0
 }).
 
 -record(node, {

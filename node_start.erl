@@ -17,10 +17,7 @@ main(ConfigFile) ->
   %%Init state of this node
   NodeState = #state {
     name = NodeName,
-    edges = Edges,
-    status = sleeping,
-    fragment_level = 0,
-    fragment_name = undefined
+    edges = Edges
   },
 
   spawn(fun() -> node:start(NodeState) end).
