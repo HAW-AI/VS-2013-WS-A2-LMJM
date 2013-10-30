@@ -123,17 +123,19 @@ handle_connect_message(State, Level, NeighbourEdge) ->
           AktState
       end;
 
-    Edge#edge.type == basic ->
-      log("~p relaying connect to myself", [State#state.name]),
-      self() ! {connect, Level, NeighbourEdge},
-      NewState;
     true ->
-      send_initiate_message(NewState,
-                            NewState#state.fragment_level + 1,
-                            Edge#edge.weight,
-                            find,
-                            Edge),
-      NewState
+      if Edge#edge.type == basic ->
+        log("~p relaying connect to myself", [State#state.name]),
+        self() ! {connect, Level, NeighbourEdge},
+        NewState;
+      true ->
+        send_initiate_message(NewState,
+                              NewState#state.fragment_level + 1,
+                              Edge#edge.weight,
+                              find,
+                              Edge),
+        NewState
+    end
   end.
 
 handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
@@ -193,11 +195,11 @@ send_test_message(State, FragmentLevel, FragmentName, Edge) ->
   get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
 handle_test_message(InState, Level, FragName, NeighbourEdge) ->
-  Edge = util:get_edge_by_neighbour_edge(InState#state.edges, NeighbourEdge),
   State = case InState#state.status == sleeping of
             true -> wakeup(InState);
             false -> InState
           end,
+  Edge = util:get_edge_by_neighbour_edge(InState#state.edges, NeighbourEdge),
   IfState = if
     Level > State#state.fragment_level ->
       log("~p relaying test to myself", [State#state.name]),
