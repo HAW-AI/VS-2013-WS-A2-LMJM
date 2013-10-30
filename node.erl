@@ -41,23 +41,23 @@ loop(State) ->
       loop(NewState);
     {initiate,Level,FragName,NodeState,Edge} ->
       log("~p received initiate on edge ~p", [State#state.name, Edge]),
-      NewState = handle_initiate_message(State, Level, FragName, NodeState, Edge),
+      NewState = handle_initiate(State, Level, FragName, NodeState, Edge),
       loop(NewState);
     {test,Level,FragName,Edge} ->
       log("~p received test on edge ~p", [State#state.name, Edge]),
-      NewState = handle_test_message(State, Level, FragName, Edge),
+      NewState = handle_test(State, Level, FragName, Edge),
       loop(NewState);
     {accept,Edge} ->
       log("~p received accept on edge ~p", [State#state.name, Edge]),
-      NewState = handle_accept_message(State, Edge),
+      NewState = handle_accept(State, Edge),
       loop(NewState);
     {reject,Edge} ->
       log("~p received reject on edge ~p", [State#state.name, Edge]),
-      NewState = handle_reject_message(State, Edge),
+      NewState = handle_reject(State, Edge),
       loop(NewState);
     {report,Weight,Edge} ->
       log("~p received report on edge ~p", [State#state.name, Edge]),
-      NewState = handle_report_message(State, Weight, Edge),
+      NewState = handle_report(State, Weight, Edge),
       loop(NewState);
     {changeroot,Edge} ->
       log("~p received changeroot on edge ~p", [State#state.name, Edge]),
@@ -65,7 +65,7 @@ loop(State) ->
       loop(NewState);
     {connect,Level,Edge} ->
       log("~p received connect on edge ~p", [State#state.name, Edge]),
-      NewState = handle_connect_message(State, Level, Edge),
+      NewState = handle_connect(State, Level, Edge),
       loop(NewState)
   end.
 
@@ -96,7 +96,7 @@ wakeup(State) ->
     find_count = 0
    }.
 
-handle_connect_message(State, Level, NeighbourEdge) ->
+handle_connect(State, Level, NeighbourEdge) ->
   NewState = case State#state.status == sleeping of
                true -> wakeup(State);
                _ -> State
@@ -110,7 +110,7 @@ handle_connect_message(State, Level, NeighbourEdge) ->
                                                          Edge,
                                                          Branch)},
 
-      send_initiate_message(AktState,
+      send_initiate(AktState,
                             AktState#state.fragment_level,
                             AktState#state.fragment_name,
                             AktState#state.status,
@@ -129,7 +129,7 @@ handle_connect_message(State, Level, NeighbourEdge) ->
         self() ! {connect, Level, NeighbourEdge},
         NewState;
       true ->
-        send_initiate_message(NewState,
+        send_initiate(NewState,
                               NewState#state.fragment_level + 1,
                               Edge#edge.weight,
                               find,
@@ -138,7 +138,7 @@ handle_connect_message(State, Level, NeighbourEdge) ->
     end
   end.
 
-handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
+handle_initiate(State, Level, FragName, NodeStatus, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
 
   BranchList = lists:filter(
@@ -152,7 +152,7 @@ handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
                  end,
 
   lists:foreach(
-    fun(EdgeElem) -> send_initiate_message(State, Level, FragName, NodeStatus, EdgeElem) end,
+    fun(EdgeElem) -> send_initiate(State, Level, FragName, NodeStatus, EdgeElem) end,
     BranchList
    ),
 
@@ -171,7 +171,7 @@ handle_initiate_message(State, Level, FragName, NodeStatus, NeighbourEdge) ->
     false -> NewState
   end.
 
-send_initiate_message(State, FragmentLevel, FragmentName, NodeStatus, Edge) ->
+send_initiate(State, FragmentLevel, FragmentName, NodeStatus, Edge) ->
   log("~p sending initiate to ~p", [State#state.name, Edge#edge.node_2]),
   get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeStatus, edge_to_tuple(Edge)}.
 
@@ -184,17 +184,17 @@ test(State) ->
   case length(BasicEdges) > 0 of
     true ->
       TestEdge = util:get_best_edge_from_basic_edges(BasicEdges),
-      send_test_message(State, State#state.fragment_level, State#state.fragment_name, TestEdge),
+      send_test(State, State#state.fragment_level, State#state.fragment_name, TestEdge),
       State#state { test_edge = TestEdge };
     false ->
       report(State#state { test_edge = undefined })
   end.
 
-send_test_message(State, FragmentLevel, FragmentName, Edge) ->
+send_test(State, FragmentLevel, FragmentName, Edge) ->
   log("~p sending test to ~p", [State#state.name, Edge#edge.node_2]),
   get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
-handle_test_message(InState, Level, FragName, NeighbourEdge) ->
+handle_test(InState, Level, FragName, NeighbourEdge) ->
   State = case InState#state.status == sleeping of
             true -> wakeup(InState);
             false -> InState
@@ -231,7 +231,7 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
       end
   end.
 
-handle_accept_message(State, NeighbourEdge) ->
+handle_accept(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
                                    true -> {Edge#edge.weight, Edge};
@@ -244,7 +244,7 @@ handle_accept_message(State, NeighbourEdge) ->
               },
   report(NewState).
 
-handle_reject_message(State, NeighbourEdge) ->
+handle_reject(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   NewState = case Edge#edge.type of
     basic ->
@@ -264,7 +264,7 @@ report(State) ->
     false -> State
   end.
 
-handle_report_message(State, Weight, NeighbourEdge) ->
+handle_report(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   case not util:are_edges_equal(State#state.in_branch, Edge) of
     true ->
