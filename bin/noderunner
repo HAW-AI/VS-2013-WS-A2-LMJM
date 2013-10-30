@@ -18,6 +18,8 @@ main([Path]) ->
     Files
    ),
 
+  timer:sleep(200),
   global:whereis_name(node_0) ! wakeup,
+  global:whereis_name(node_2) ! wakeup,
 
   io:fread("", "~c").

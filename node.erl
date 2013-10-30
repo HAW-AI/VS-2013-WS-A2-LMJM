@@ -12,19 +12,23 @@ start(State) ->
 loop(State) ->
   log(
 "~p (~p)
+  Fragment Name ~p
+  Fragment Level ~p,
   Edges ~p
   Best Edge ~p
   Best Weight ~p
-  Fragment Name ~p
-  Fragment Level ~p",
+  In Branch ~p
+  Test Edge ~p",
     [
      State#state.name,
      State#state.status,
+     State#state.fragment_name,
+     State#state.fragment_level,
      State#state.edges,
      State#state.best_edge,
      State#state.best_weight,
-     State#state.fragment_name,
-     State#state.fragment_level
+     State#state.in_branch,
+     State#state.test_edge
     ]),
 
   receive
@@ -78,6 +82,7 @@ wakeup(State) ->
   AsBranch = Akmg#edge { type = branch },
   NewEdgeList = util:replace_edge(State#state.edges, Akmg, AsBranch),
 
+  log("sending connect to ~p", [Akmg#edge.node_2]),
   get_target_pid(Akmg) ! { connect, State#state.fragment_level, edge_to_tuple(Akmg) },
   State#state { edges = NewEdgeList, status = found }.
 
@@ -114,6 +119,7 @@ handle_initiate_message(State, Level, FragName, NodeState, SourceEdge) ->
   end.
 
 send_initiate_message(FragmentLevel, FragmentName, NodeState, Edge) ->
+  log("sending initiate to ~p", [Edge#edge.node_2]),
   get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeState, edge_to_tuple(Edge)}.
 
 
@@ -132,6 +138,7 @@ test(State) ->
   end.
 
 send_test_message(FragmentLevel, FragmentName, Edge) ->
+  log("sending test to ~p", [Edge#edge.node_2]),
   get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
 handle_test_message(InState, Level, FragName, NeighbourEdge) ->
@@ -141,10 +148,12 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
           end,
   if
     Level > State#state.fragment_level ->
+      log("relaying test to myself", []),
       self() ! {test, Level, FragName, NeighbourEdge},
       State;
     FragName /= State#state.fragment_name ->
       NEdge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
+      log("sending accept to ~p", [NEdge#edge.node_2]),
       get_target_pid(NEdge) ! {accept, NeighbourEdge},
       State;
     true ->
@@ -157,6 +166,7 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
                                                              Rejected)},
           case AktState#state.test_edge /= Rejected of
             true ->
+              log("sending reject to ~p", [Rejected#edge.node_2]),
               get_target_pid(Rejected) ! {reject, edge_to_tuple(Rejected)},
               AktState;
             false ->
@@ -168,6 +178,7 @@ handle_test_message(InState, Level, FragName, NeighbourEdge) ->
 
 handle_accept_message(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
+  log("~p EDGE", [NeighbourEdge]),
   {NewBestWeight, NewBestEdge} = case Edge#edge.weight < State#state.best_weight of
                                    true -> {Edge#edge.weight, Edge};
                                    false -> {State#state.best_weight, State#state.best_edge}
@@ -205,13 +216,16 @@ handle_report_message(State, Weight, NeighbourEdge) ->
       report(NewState);
     false ->
       case State#state.status of
-        find -> self() ! { report, Weight, edge_to_tuple(NeighbourEdge) };
-        _ -> case Weight > State#state.best_weight of
-               true -> change_root(State);
-               false -> case (State#state.best_weight == infinity) and (Weight == infinity) of
-                          true -> log("ending, MST found. i guess :)", [])
-                        end
-             end
+        find ->
+          log("relaying report to myself", []),
+          self() ! { report, Weight, edge_to_tuple(NeighbourEdge) };
+        _ ->
+          case Weight > State#state.best_weight of
+            true -> change_root(State);
+            false -> case (State#state.best_weight == infinity) and (Weight == infinity) of
+                       true -> log("ending, MST found. i guess :)", [])
+                     end
+          end
       end,
       State
   end.
@@ -220,6 +234,7 @@ report(State) ->
   case (State#state.find_count == 0) and (State#state.test_edge == undefined) of
     true ->
       NewState = State#state { status = found },
+      log("sending report to ~p", [State#state.in_branch#edge.node_2]),
       get_target_pid(State#state.in_branch) ! { report, State#state.best_weight, edge_to_tuple(State#state.in_branch) },
       NewState;
     false -> State
@@ -231,8 +246,12 @@ handle_changeroot_mesage(State) ->
 change_root(State) ->
   BestEdge = State#state.best_edge,
   case BestEdge#edge.type of
-    branch -> get_target_pid(BestEdge) ! { changeroot, edge_to_tuple(BestEdge) };
-    _ -> get_target_pid(BestEdge) ! { connect, State#state.fragment_level, edge_to_tuple(BestEdge) }
+    branch ->
+      log("sending changeroot to ~p", [BestEdge#edge.node_2]),
+      get_target_pid(BestEdge) ! { changeroot, edge_to_tuple(BestEdge) };
+    _ ->
+      log("sending connect to ~p", [BestEdge#edge.node_2]),
+      get_target_pid(BestEdge) ! { connect, State#state.fragment_level, edge_to_tuple(BestEdge) }
   end,
   State.
 
@@ -266,6 +285,7 @@ handle_connect_message(State, Level, Edge) ->
       end;
     LocalEdge#edge.type == basic ->
       %%Place message on end of queue
+      log("relaying connect to myself", []),
       self() ! {connect, Level, Edge},
       NewState;
     true ->
