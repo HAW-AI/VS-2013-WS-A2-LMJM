@@ -125,8 +125,7 @@ handle_connect(State, Level, NeighbourEdge) ->
     true ->
       case Edge#edge.type of
         basic ->
-          log("~p relaying connect to itself", [State#state.name]),
-          self() ! {connect, Level, NeighbourEdge},
+          resend(State, {connect, Level, NeighbourEdge}),
           NewState;
         _ ->
           send_initiate(NewState, NewState#state.fragment_level + 1, Edge#edge.weight, find, Edge),
@@ -192,8 +191,7 @@ handle_test(InState, Level, FragName, NeighbourEdge) ->
 
   if
     Level > State#state.fragment_level ->
-      log("~p relaying test to itself", [State#state.name]),
-      self() ! {test, Level, FragName, NeighbourEdge},
+      resend(State, {test, Level, FragName, NeighbourEdge}),
       State;
     true ->
       Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
@@ -272,8 +270,7 @@ handle_report(State, Weight, NeighbourEdge) ->
     false ->
       case State#state.status of
         find ->
-          log("~p relaying report to itself", [State#state.name]),
-          self() ! { report, Weight, NeighbourEdge };
+          resend(State, {report, Weight, NeighbourEdge});
         _ ->
           case Weight > State#state.best_weight of
             true -> change_root(State);
@@ -336,3 +333,8 @@ send_changeroot(State, Edge) ->
   log("~p sending changeroot to ~p", [State#state.name, Edge#edge.node_2]),
   get_target_pid(Edge) ! { changeroot, edge_to_tuple(Edge) }.
 
+resend(State, Payload) ->
+  [Message | _] = tuple_to_list(Payload),
+  log("~p relaying ~p to itself", [State#state.name, Message]),
+  timer:sleep(300),
+  self() ! Payload.
