@@ -11,27 +11,7 @@ start(State) ->
   loop(State).
 
 loop(State) ->
-  log(
-"~p (~p) ~p
-  Fragment Name ~p
-  Fragment Level ~p,
-  Edges ~p
-  Best Edge ~p
-  Best Weight ~p
-  In Branch ~p
-  Test Edge ~p",
-    [
-     State#state.name,
-     State#state.status,
-     calendar:local_time(),
-     State#state.fragment_name,
-     State#state.fragment_level,
-     State#state.edges,
-     State#state.best_edge,
-     State#state.best_weight,
-     State#state.in_branch,
-     State#state.test_edge
-    ]),
+  log_state(State),
   timer:sleep(100),
 
   receive
@@ -338,3 +318,26 @@ resend(State, Payload) ->
   log("~p relaying ~p to itself", [State#state.name, Message]),
   timer:sleep(300),
   self() ! Payload.
+
+log_state(State) ->
+  log(
+"~p (~p) ~p
+  Fragment Name ~p
+  Fragment Level ~p,
+  Edges ~p
+  Best Edge ~p
+  Best Weight ~p
+  In Branch ~p
+  Test Edge ~p",
+    [
+     State#state.name,
+     State#state.status,
+     calendar:local_time(),
+     State#state.fragment_name,
+     State#state.fragment_level,
+     State#state.edges,
+     State#state.best_edge,
+     State#state.best_weight,
+     State#state.in_branch,
+     State#state.test_edge
+    ]).
