@@ -235,8 +235,8 @@ report(State) ->
 
 handle_report(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
-  case not util:are_edges_equal(State#state.in_branch, Edge) of
-    true ->
+  case util:are_edges_equal(State#state.in_branch, Edge) of
+    false ->
       {NewBestWeight, NewBestEdge} = case Weight < State#state.best_weight of
                                        true -> {Weight, Edge};
                                        false -> {State#state.best_weight, State#state.best_edge}
@@ -247,22 +247,23 @@ handle_report(State, Weight, NeighbourEdge) ->
                    best_edge = NewBestEdge
                   },
       report(NewState);
-    false ->
+    true ->
       case State#state.status of
         find ->
-          resend(State, {report, Weight, NeighbourEdge});
+          resend(State, {report, Weight, NeighbourEdge}),
+          State;
         _ ->
           case Weight > State#state.best_weight of
-            true -> change_root(State);
+            true ->
+              change_root(State);
             false -> case {State#state.best_weight, Weight} of
                        {?INFINITY, ?INFINITY} ->
                          log("~p ending, MST found. i guess :)", [State#state.name]),
                          exit(normal);
-                       _ -> noop
+                       _ -> State
                      end
           end
-      end,
-      State
+      end
   end.
 
 
@@ -274,7 +275,7 @@ change_root(State) ->
       State;
     _ ->
       send_connect(State, State#state.fragment_level, BestEdge),
-      NewEdgeList = util:replace_edge(State#state.edges, BestEdge, BestEdge#edge { type = branch  }),
+      NewEdgeList = util:replace_edge(State#state.edges, BestEdge, BestEdge#edge { type = branch }),
       State#state { edges = NewEdgeList }
   end.
 
