@@ -301,6 +301,10 @@ change_root(State) ->
       State#state { edges = NewEdgeList }
   end.
 
+
+handle_changeroot(State) ->
+  change_root(State).
+
 % send methods
 
 
@@ -331,18 +335,4 @@ send_report(State, BestWeight, Edge) ->
 send_changeroot(State, Edge) ->
   log("~p sending changeroot to ~p", [State#state.name, Edge#edge.node_2]),
   get_target_pid(Edge) ! { changeroot, edge_to_tuple(Edge) }.
-
-
-
-
-
-
-
-
-
-
-
-
-handle_changeroot(State) ->
-  change_root(State).
 
