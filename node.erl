@@ -61,7 +61,7 @@ loop(State) ->
       loop(NewState);
     {changeroot,Edge} ->
       log("~p received changeroot on edge ~p", [State#state.name, Edge]),
-      NewState = handle_changeroot_mesage(State),
+      NewState = handle_changeroot(State),
       loop(NewState);
     {connect,Level,Edge} ->
       log("~p received connect on edge ~p", [State#state.name, Edge]),
@@ -78,6 +78,7 @@ edge_to_tuple(Edge) ->
 register_node(NodeName, Pid) ->
   global:register_name(NodeName, Pid).
 
+
 wakeup(State) ->
   BestEdge = util:get_best_edge_from_basic_edges(State#state.edges),
 
@@ -86,8 +87,7 @@ wakeup(State) ->
                   BestEdge,
                   BestEdge#edge { type = branch }),
 
-  log("~p sending connect to ~p", [State#state.name, BestEdge#edge.node_2]),
-  get_target_pid(BestEdge) ! { connect, 0, edge_to_tuple(BestEdge) },
+  send_connect(State, 0, BestEdge),
 
   State#state {
     edges = NewEdgeList,
@@ -96,19 +96,18 @@ wakeup(State) ->
     find_count = 0
    }.
 
+
 handle_connect(State, Level, NeighbourEdge) ->
   NewState = case State#state.status == sleeping of
                true -> wakeup(State);
                _ -> State
              end,
-  Edge = util:get_edge_by_neighbour_edge(NewState#state.edges, NeighbourEdge),
 
+  Edge = util:get_edge_by_neighbour_edge(NewState#state.edges, NeighbourEdge),
   if
     Level < NewState#state.fragment_level ->
       Branch = Edge#edge { type = branch },
-      AktState = State#state { edges = util:replace_edge(State#state.edges,
-                                                         Edge,
-                                                         Branch)},
+      AktState = State#state { edges = util:replace_edge(State#state.edges, Edge, Branch)},
 
       send_initiate(AktState,
                             AktState#state.fragment_level,
@@ -116,27 +115,25 @@ handle_connect(State, Level, NeighbourEdge) ->
                             AktState#state.status,
                             Branch),
 
-      case AktState#state.status == find of
-        true ->
+      case AktState#state.status of
+        find ->
           AktState#state { find_count = AktState#state.find_count + 1 };
-        false ->
+        _ ->
           AktState
       end;
 
     true ->
-      if Edge#edge.type == basic ->
-        log("~p relaying connect to itself", [State#state.name]),
-        self() ! {connect, Level, NeighbourEdge},
-        NewState;
-      true ->
-        send_initiate(NewState,
-                              NewState#state.fragment_level + 1,
-                              Edge#edge.weight,
-                              find,
-                              Edge),
-        NewState
-    end
+      case Edge#edge.type of
+        basic ->
+          log("~p relaying connect to itself", [State#state.name]),
+          self() ! {connect, Level, NeighbourEdge},
+          NewState;
+        _ ->
+          send_initiate(NewState, NewState#state.fragment_level + 1, Edge#edge.weight, find, Edge),
+          NewState
+      end
   end.
+
 
 handle_initiate(State, Level, FragName, NodeStatus, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
@@ -146,9 +143,9 @@ handle_initiate(State, Level, FragName, NodeStatus, NeighbourEdge) ->
                  State#state.edges
                 ),
 
-  NewFindCount = case NodeStatus == find of
-                   true -> State#state.find_count + length(BranchList);
-                   false -> State#state.find_count
+  NewFindCount = case NodeStatus of
+                   find -> State#state.find_count + length(BranchList);
+                   _ -> State#state.find_count
                  end,
 
   lists:foreach(
@@ -166,14 +163,10 @@ handle_initiate(State, Level, FragName, NodeStatus, NeighbourEdge) ->
                         find_count = NewFindCount
                        },
 
-  case NodeStatus == find of
-    true -> test(NewState);
-    false -> NewState
+  case NodeStatus of
+    find -> test(NewState);
+    _ -> NewState
   end.
-
-send_initiate(State, FragmentLevel, FragmentName, NodeStatus, Edge) ->
-  log("~p sending initiate to ~p", [State#state.name, Edge#edge.node_2]),
-  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeStatus, edge_to_tuple(Edge)}.
 
 
 test(State) ->
@@ -190,14 +183,11 @@ test(State) ->
       report(State#state { test_edge = undefined })
   end.
 
-send_test(State, FragmentLevel, FragmentName, Edge) ->
-  log("~p sending test to ~p", [State#state.name, Edge#edge.node_2]),
-  get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
 handle_test(InState, Level, FragName, NeighbourEdge) ->
-  State = case InState#state.status == sleeping of
-            true -> wakeup(InState);
-            false -> InState
+  State = case InState#state.status of
+            sleeping -> wakeup(InState);
+            _ -> InState
           end,
 
   if
@@ -209,27 +199,26 @@ handle_test(InState, Level, FragName, NeighbourEdge) ->
       Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
 
       if FragName /= State#state.fragment_name ->
-        log("~p sending accept to ~p", [State#state.name, Edge#edge.node_2]),
-        get_target_pid(Edge) ! {accept, edge_to_tuple(Edge)},
+        send_accept(State, Edge),
         State;
       true ->
-        NewState = case Edge#edge.type == basic of
-          true ->
+        NewState = case Edge#edge.type of
+          basic ->
             Rejected = Edge#edge { type = rejected },
             State#state { edges = util:replace_edge(State#state.edges, Edge, Rejected) };
-          false -> State
+          _ -> State
         end,
 
         case not util:are_edges_equal(NewState#state.test_edge, Edge) of
           true ->
-            log("~p sending reject to ~p", [State#state.name, Edge#edge.node_2]),
-            get_target_pid(Edge) ! {reject, edge_to_tuple(Edge)},
+            send_reject(NewState, Edge),
             NewState;
           false ->
             test(NewState)
         end
       end
   end.
+
 
 handle_accept(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
@@ -244,6 +233,7 @@ handle_accept(State, NeighbourEdge) ->
               },
   report(NewState).
 
+
 handle_reject(State, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
   NewState = case Edge#edge.type of
@@ -254,15 +244,16 @@ handle_reject(State, NeighbourEdge) ->
   end,
   test(NewState).
 
+
 report(State) ->
-  case (State#state.find_count == 0) and (State#state.test_edge == undefined) of
-    true ->
+  case {State#state.find_count, State#state.test_edge} of
+    {0, undefined} ->
       NewState = State#state { status = found },
-      log("~p sending report to ~p", [State#state.name, State#state.in_branch#edge.node_2]),
-      get_target_pid(State#state.in_branch) ! { report, State#state.best_weight, edge_to_tuple(State#state.in_branch) },
+      send_report(State, State#state.best_weight, State#state.in_branch),
       NewState;
-    false -> State
+    _ -> State
   end.
+
 
 handle_report(State, Weight, NeighbourEdge) ->
   Edge = util:get_edge_by_neighbour_edge(State#state.edges, NeighbourEdge),
@@ -286,30 +277,72 @@ handle_report(State, Weight, NeighbourEdge) ->
         _ ->
           case Weight > State#state.best_weight of
             true -> change_root(State);
-            false -> case (State#state.best_weight == ?INFINITY) and (Weight == ?INFINITY) of
-                       true ->
+            false -> case {State#state.best_weight, Weight} of
+                       {?INFINITY, ?INFINITY} ->
                          log("~p ending, MST found. i guess :)", [State#state.name]),
                          exit(normal);
-                       false -> noop
+                       _ -> noop
                      end
           end
       end,
       State
   end.
 
+
 change_root(State) ->
   BestEdge = State#state.best_edge,
   case BestEdge#edge.type of
     branch ->
-      log("~p sending changeroot to ~p", [State#state.name, BestEdge#edge.node_2]),
-      get_target_pid(BestEdge) ! { changeroot, edge_to_tuple(BestEdge) },
+      send_changeroot(State, BestEdge),
       State;
     _ ->
-      log("~p sending connect to ~p", [State#state.name, BestEdge#edge.node_2]),
-      get_target_pid(BestEdge) ! { connect, State#state.fragment_level, edge_to_tuple(BestEdge) },
-      State#state { edges = util:replace_edge(State#state.edges, BestEdge, BestEdge#edge { type = branch }) }
+      send_connect(State, State#state.fragment_level, BestEdge),
+      NewEdgeList = util:replace_edge(State#state.edges, BestEdge, BestEdge#edge { type = branch  }),
+      State#state { edges = NewEdgeList }
   end.
 
-handle_changeroot_mesage(State) ->
+% send methods
+
+
+send_connect(State, Level, Edge) ->
+  log("~p sending connect to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! { connect, Level, edge_to_tuple(Edge) }.
+
+send_initiate(State, FragmentLevel, FragmentName, NodeStatus, Edge) ->
+  log("~p sending initiate to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeStatus, edge_to_tuple(Edge)}.
+
+send_test(State, FragmentLevel, FragmentName, Edge) ->
+  log("~p sending test to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
+
+send_accept(State, Edge) ->
+  log("~p sending accept to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! {accept, edge_to_tuple(Edge)}.
+
+send_reject(State, Edge) ->
+  log("~p sending reject to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! {reject, edge_to_tuple(Edge)}.
+
+send_report(State, BestWeight, Edge) ->
+  log("~p sending report to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! { report, BestWeight, edge_to_tuple(Edge) }.
+
+send_changeroot(State, Edge) ->
+  log("~p sending changeroot to ~p", [State#state.name, Edge#edge.node_2]),
+  get_target_pid(Edge) ! { changeroot, edge_to_tuple(Edge) }.
+
+
+
+
+
+
+
+
+
+
+
+
+handle_changeroot(State) ->
   change_root(State).
 
