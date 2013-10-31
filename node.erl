@@ -20,27 +20,27 @@ loop(State) ->
       NewState = wakeup(State),
       loop(NewState);
     {initiate,Level,FragName,NodeState,Edge} ->
-      log("~p received initiate on edge ~p", [State#state.name, Edge]),
+      log_receive(initiate, State, Edge),
       NewState = handle_initiate(State, Level, FragName, NodeState, Edge),
       loop(NewState);
     {test,Level,FragName,Edge} ->
-      log("~p received test on edge ~p", [State#state.name, Edge]),
+      log_receive(test, State, Edge),
       NewState = handle_test(State, Level, FragName, Edge),
       loop(NewState);
     {accept,Edge} ->
-      log("~p received accept on edge ~p", [State#state.name, Edge]),
+      log_receive(accept, State, Edge),
       NewState = handle_accept(State, Edge),
       loop(NewState);
     {reject,Edge} ->
-      log("~p received reject on edge ~p", [State#state.name, Edge]),
+      log_receive(reject, State, Edge),
       NewState = handle_reject(State, Edge),
       loop(NewState);
     {report,Weight,Edge} ->
-      log("~p received report on edge ~p", [State#state.name, Edge]),
+      log_receive(report, State, Edge),
       NewState = handle_report(State, Weight, Edge),
       loop(NewState);
     {changeroot,Edge} ->
-      log("~p received changeroot on edge ~p", [State#state.name, Edge]),
+      log_receive(changeroot, State, Edge),
       NewState = handle_changeroot(State),
       loop(NewState);
     {connect,Level,Edge} ->
@@ -287,31 +287,31 @@ handle_changeroot(State) ->
 
 
 send_connect(State, Level, Edge) ->
-  log("~p sending connect to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(connect, State, Edge),
   get_target_pid(Edge) ! { connect, Level, edge_to_tuple(Edge) }.
 
 send_initiate(State, FragmentLevel, FragmentName, NodeStatus, Edge) ->
-  log("~p sending initiate to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(initiate, State, Edge),
   get_target_pid(Edge) ! {initiate, FragmentLevel, FragmentName, NodeStatus, edge_to_tuple(Edge)}.
 
 send_test(State, FragmentLevel, FragmentName, Edge) ->
-  log("~p sending test to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(test, State, Edge),
   get_target_pid(Edge) ! { test, FragmentLevel, FragmentName, edge_to_tuple(Edge) }.
 
 send_accept(State, Edge) ->
-  log("~p sending accept to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(accept, State, Edge),
   get_target_pid(Edge) ! {accept, edge_to_tuple(Edge)}.
 
 send_reject(State, Edge) ->
-  log("~p sending reject to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(reject, State, Edge),
   get_target_pid(Edge) ! {reject, edge_to_tuple(Edge)}.
 
 send_report(State, BestWeight, Edge) ->
-  log("~p sending report to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(report, State, Edge),
   get_target_pid(Edge) ! { report, BestWeight, edge_to_tuple(Edge) }.
 
 send_changeroot(State, Edge) ->
-  log("~p sending changeroot to ~p", [State#state.name, Edge#edge.node_2]),
+  log_send(changeroot, State, Edge),
   get_target_pid(Edge) ! { changeroot, edge_to_tuple(Edge) }.
 
 resend(State, Payload) ->
@@ -320,21 +320,29 @@ resend(State, Payload) ->
   timer:sleep(300),
   self() ! Payload.
 
+log_send(Message, State, Edge) ->
+  log("~p (~p) sending ~p to ~p",
+      [State#state.name, State#state.fragment_name, Message, Edge#edge.node_2]).
+
+log_receive(Message, State, Edge) ->
+  log("~p (~p) received ~p on edge ~p",
+      [State#state.name, State#state.fragment_name, Message, Edge]).
+
 log_state(State) ->
   log(
-"~p (~p) ~p
+"~n~p
+~p (~p) ~p
   Fragment Name ~p
-  Fragment Level ~p,
   Edges ~p
   Best Edge ~p
   Best Weight ~p
   In Branch ~p
-  Test Edge ~p",
+  Test Edge ~p~n",
     [
-     State#state.name,
-     State#state.status,
      calendar:local_time(),
+     State#state.name,
      State#state.fragment_name,
+     State#state.status,
      State#state.fragment_level,
      State#state.edges,
      State#state.best_edge,
