@@ -23,8 +23,8 @@ Einen node über main starten
 Die Konfiguration eines einzelnen nodes beschreibt den Namen des Nodes über den Dateinamen und
 die adjazenten Kanten mit der Syntax `Weight, NeighbourNodeName`
 Beispiel: node_0.conf
-`6,node_1
- 4,node_4`
+    6,node_1
+    4,node_4
  
  Nach dem alle Nodes des Graphen initialisiert sind, muss mindestens einer aufgeweckt werden, um den
  Algortihmus zu starten (in der Erlang-Konsole).
